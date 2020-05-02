@@ -5,6 +5,8 @@
 #include <condition_variable>
 #include <cstdint>
 
+#include <spdlog/spdlog.h>
+
 #include "catch.hpp"
 
 using uint8 = std::uint8_t;
@@ -21,10 +23,14 @@ public:
 
     virtual ~DataChunk() = default;
 
-    DataChunk(DataChunk::Type t = Data) : type{t}, data1{0}, data2{0} {}
+    DataChunk(DataChunk::Type type = Data) : type_{type}, data1{0}, data2{0} {}
 
-    const Type type;
+    Type getType() const { return type_; }
+
     uint8 data1, data2;
+
+private:
+    const Type type_;
 };
 
 class BasicBlock {
@@ -36,6 +42,8 @@ public:
 
     void start() {
         thread_ = std::make_unique<std::thread>([this]() {
+            if (prevBlock_) { prevBlock_->start(); }
+
             while (true) {
                 std::unique_ptr<DataChunk> chunk{nullptr};
                 bool shouldStop = false;
@@ -44,7 +52,7 @@ public:
                     if (!chunk) {
                         throw std::runtime_error{"Block has not returned chunk"};
                     }
-                    shouldStop = chunk->type == DataChunk::End;
+                    shouldStop = chunk->getType() == DataChunk::End;
                 }
 
                 auto processedChunk = processChunk(std::move(chunk));
@@ -54,14 +62,16 @@ public:
 
                     shouldStop = shouldStop || shouldStop_;
                     if (shouldStop) {
-                        break;
+                        chunk_ = std::make_unique<DataChunk>(DataChunk::End);
+                    } else {
+                        if (chunk_) { lostChunks_++; }
+                        chunk_ = std::move(processedChunk);
                     }
-
-                    if (chunk_) { lostChunks_++; }
-                    chunk_ = std::move(processedChunk);
                 }
 
                 cv_.notify_one();
+
+                if (shouldStop) { break; }
             }
 
         });
@@ -84,6 +94,8 @@ public:
             LockGuard lock{joinMutex_};
             if (thread_->joinable()) { thread_->join(); }
         }
+
+        if (prevBlock_) { prevBlock_->stop(); }
     }
 
     int lostChunksCount() const {
@@ -93,14 +105,15 @@ public:
 
 private:
     virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) {
-        if (chunk->type == DataChunk::Data) {
-            auto processedChunk = std::make_unique<DataChunk>(
-                    chunk->data1 > 100 ? DataChunk::End : DataChunk::Data);
-
-            processedChunk->data1 = ++chunk->data1;
-            processedChunk->data2 = ++chunk->data2;
-            return std::move(processedChunk);
+        int v = 0;
+        if (chunk && chunk->getType() == DataChunk::Data) {
+            v = ++chunk->data1;
         }
+        auto processedChunk = std::make_unique<DataChunk>(
+                v == 100 ? DataChunk::End : DataChunk::Data);
+
+        processedChunk->data1 = v;
+        return std::move(processedChunk);
     };
 
     BasicBlock *const prevBlock_;
@@ -112,22 +125,21 @@ private:
     mutable std::mutex mutex_, joinMutex_;
 };
 
-TEST_CASE("BasicBlock", "[pipeliner]") {
-    BasicBlock generator{};
-    BasicBlock filter{&generator};
+TEST_CASE("BasicBlock", "[BasicBlock]") {
+    BasicBlock g{};
+    BasicBlock generator{&g};
+    generator.start();
 
-    filter.start();
-
-    const auto tFinish = Duration<std::nano>{3e5} + Clock::now();
-    auto tLast = Clock::now();
+    auto t = Clock::now();
+    const auto tFinish = Duration<std::nano>{3e5} + t;
     while (Clock::now() < tFinish) {
-        auto chunk = filter.waitChunk();
+        auto chunk = generator.waitChunk();
         std::cout << "iteration time ns: "
-                  << Duration<std::nano>{Clock::now() - tLast}.count()
+                  << Duration<std::nano>{Clock::now() - t}.count()
                   << std::endl;
-        tLast = Clock::now();
+        t = Clock::now();
     }
 
-    filter.stop();
+    generator.stop();
 }
 

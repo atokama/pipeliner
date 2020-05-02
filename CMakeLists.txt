@@ -13,4 +13,7 @@ add_executable(pipeliner_tester
         test/basic_block_test.cpp
         )
 
+target_include_directories(pipeliner_tester SYSTEM PUBLIC "dependencies")
+
 target_link_libraries(pipeliner_tester ${CMAKE_THREAD_LIBS_INIT})
+
