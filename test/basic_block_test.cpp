@@ -9,14 +9,14 @@
 
 namespace pipeliner {
 
-    using uint8 = std::uint8_t;
+    using Uint8 = std::uint8_t;
     using Clock = std::chrono::high_resolution_clock;
     template<typename Ratio> using Duration = std::chrono::duration<double, Ratio>;
 
     struct TesterChunk : public DataChunk {
         TesterChunk(DataChunk::Type type) : DataChunk{type}, value{} {}
 
-        uint8 value;
+        Uint8 value;
     };
 
     class BasicBlockTester : public BasicBlock {

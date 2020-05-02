@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(Pipeliner)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(Threads)
 
@@ -11,9 +11,9 @@ add_library(pipeliner
         main.cpp
         )
 
-target_include_directories(pipeliner PUBLIC "include")
+target_include_directories(pipeliner PUBLIC include)
 
-target_include_directories(pipeliner SYSTEM PUBLIC "dependencies")
+target_include_directories(pipeliner SYSTEM PUBLIC dependencies)
 
 target_link_libraries(pipeliner ${CMAKE_THREAD_LIBS_INIT})
 
@@ -21,6 +21,11 @@ add_executable(pipeliner_tester
         test/catch.hpp
         test/tester_main.cpp
         test/basic_block_test.cpp
+        test/generator_block_test.cpp
         )
 
+
+# Unit tests
+
+file(COPY test/data DESTINATION .)
 target_link_libraries(pipeliner_tester pipeliner)

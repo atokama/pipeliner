@@ -7,7 +7,7 @@
 
 namespace pipeliner {
 
-    using uint8 = std::uint8_t;
+    using Uint8 = std::uint8_t;
 
     class DataChunk {
     public:
@@ -21,7 +21,7 @@ namespace pipeliner {
 
         Type getType() const { return type_; }
 
-        uint8 data1, data2;
+        Uint8 data1, data2;
 
     private:
         const Type type_;
