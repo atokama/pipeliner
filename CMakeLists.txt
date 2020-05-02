@@ -5,7 +5,17 @@ set(CMAKE_CXX_STANDARD 14)
 
 find_package(Threads)
 
-add_executable(pipeliner main.cpp)
+add_library(pipeliner
+        include/pipeliner/basic_block.h
+        source/basic_block.cpp
+        main.cpp
+        )
+
+target_include_directories(pipeliner PUBLIC "include")
+
+target_include_directories(pipeliner SYSTEM PUBLIC "dependencies")
+
+target_link_libraries(pipeliner ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(pipeliner_tester
         test/catch.hpp
@@ -13,7 +23,4 @@ add_executable(pipeliner_tester
         test/basic_block_test.cpp
         )
 
-target_include_directories(pipeliner_tester SYSTEM PUBLIC "dependencies")
-
-target_link_libraries(pipeliner_tester ${CMAKE_THREAD_LIBS_INIT})
-
+target_link_libraries(pipeliner_tester pipeliner)
