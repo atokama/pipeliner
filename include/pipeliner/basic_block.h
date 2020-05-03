@@ -41,7 +41,6 @@ namespace pipeliner {
 
         int lostChunksCount() const;
 
-    protected:
         virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
 
     private:
