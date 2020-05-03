@@ -7,8 +7,9 @@ find_package(Threads)
 
 add_library(pipeliner
         include/pipeliner/basic_block.h
+        include/pipeliner/generator_block.h
         source/basic_block.cpp
-        main.cpp
+        source/generator_block.cpp
         )
 
 target_include_directories(pipeliner PUBLIC include)
