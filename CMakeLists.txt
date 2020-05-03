@@ -8,8 +8,10 @@ find_package(Threads)
 add_library(pipeliner
         include/pipeliner/basic_block.h
         include/pipeliner/generator_block.h
+        include/pipeliner/filter_block.h
         source/basic_block.cpp
         source/generator_block.cpp
+        source/filter_block.cpp
         )
 
 target_include_directories(pipeliner PUBLIC include)
@@ -23,6 +25,7 @@ add_executable(pipeliner_tester
         test/tester_main.cpp
         test/basic_block_test.cpp
         test/generator_block_test.cpp
+        test/filter_block_test.cpp
         )
 
 
