@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
 
 #include <csv.h>
 
@@ -84,9 +86,20 @@ namespace pipeliner {
 
     class RandomNumberGeneratorBlock : public BasicBlock {
     public:
-        RandomNumberGeneratorBlock() : BasicBlock{nullptr} {
+        RandomNumberGeneratorBlock() : BasicBlock{nullptr} { std::srand(std::time(nullptr)); }
 
+        std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override {
+            auto chunk = std::make_unique<DataChunk>();
+            chunk->data1 = std::rand() % std::numeric_limits<Uint8>::max();
+            chunk->data2 = std::rand() % std::numeric_limits<Uint8>::max();
+            return std::move(chunk);
         }
     };
+
+    TEST_CASE("RandomNumberGeneratorBlock", "[GeneratorBlock]") {
+        RandomNumberGeneratorBlock block{};
+        auto chunk = block.processChunk(nullptr);
+        REQUIRE(DataChunk::Data == chunk->getType());
+    }
 
 }
