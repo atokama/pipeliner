@@ -5,37 +5,43 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(Threads)
 
-add_library(pipeliner
+set(PIPELINER_INCLUDE_FILES
         include/pipeliner/basic_block.h
         include/pipeliner/generator_block.h
-        include/pipeliner/filter_block.h
+        include/pipeliner/filter_block.h)
+
+set(PIPELINER_SOURCE_FILES
         source/basic_block.cpp
         source/generator_block.cpp
-        source/filter_block.cpp
-        )
+        source/filter_block.cpp)
 
+source_group("Include Files" FILES ${PIPELINER_INCLUDE_FILES})
+source_group("Source Files" FILES ${PIPELINER_SOURCE_FILES})
+
+add_library(pipeliner ${PIPELINER_INCLUDE_FILES} ${PIPELINER_SOURCE_FILES})
 target_include_directories(pipeliner PUBLIC include)
-
 target_include_directories(pipeliner SYSTEM PUBLIC dependencies)
-
 target_link_libraries(pipeliner ${CMAKE_THREAD_LIBS_INIT})
 
-add_executable(pipeliner_tester
+
+# Tests
+set(PIPELINER_TESTER_FILES
         test/catch.hpp
         test/tester_main.cpp
         test/basic_block_test.cpp
         test/generator_block_test.cpp
         test/filter_block_test.cpp
-        test/generator_and_filter_test.cpp
-        )
+        test/generator_and_filter_test.cpp)
 
+source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
 
-# Tests
-
-file(COPY test/data DESTINATION .)
+add_executable(pipeliner_tester ${PIPELINER_TESTER_FILES})
 target_link_libraries(pipeliner_tester pipeliner)
 
-# Example
+file(COPY test/data DESTINATION .)
 
-add_executable(pipeliner_example example/main.cpp)
+# Example
+set(PIPELINER_EXAMPLE_FILES example/main.cpp)
+source_group("Example Files" FILES ${PIPELINER_EXAMPLE_FILES})
+add_executable(pipeliner_example ${PIPELINER_EXAMPLE_FILES})
 target_link_libraries(pipeliner_example pipeliner)
