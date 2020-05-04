@@ -27,7 +27,7 @@ namespace pipeliner {
 
         while (true) {
             auto chunk = b2.waitChunk();
-            if (chunk->getType() == DataChunk::Data) { break; }
+            if (chunk->getType() == DataChunk::End) { break; }
         }
 
         b2.stop();

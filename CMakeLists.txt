@@ -34,3 +34,8 @@ add_executable(pipeliner_tester
 
 file(COPY test/data DESTINATION .)
 target_link_libraries(pipeliner_tester pipeliner)
+
+# Example
+
+add_executable(pipeliner_example example/main.cpp)
+target_link_libraries(pipeliner_example pipeliner)
