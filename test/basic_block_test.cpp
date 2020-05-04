@@ -4,14 +4,11 @@
 #include <cstdint>
 
 #include <spdlog/spdlog.h>
+#include <timer.h>
 
 #include "catch.hpp"
 
 namespace pipeliner {
-
-    using Uint8 = std::uint8_t;
-    using Clock = std::chrono::high_resolution_clock;
-    template<typename Ratio> using Duration = std::chrono::duration<double, Ratio>;
 
     struct TesterChunk : public DataChunk {
         TesterChunk(DataChunk::Type type) : DataChunk{type}, value{} {}
@@ -42,14 +39,12 @@ namespace pipeliner {
         BasicBlockTester generator{&g};
         generator.start();
 
-        auto t = Clock::now();
-        const auto tFinish = Duration<std::nano>{3e5} + t;
-        while (Clock::now() < tFinish) {
+        auto t = ns();
+        const auto tFinish = 300000 + t;
+        while (ns() < tFinish) {
             auto chunk = generator.waitChunk();
-            std::cout << "iteration time ns: "
-                      << Duration<std::nano>{Clock::now() - t}.count()
-                      << std::endl;
-            t = Clock::now();
+            std::cout << "iteration time ns: " << ns() - t << std::endl;
+            t = ns();
         }
 
         generator.stop();
