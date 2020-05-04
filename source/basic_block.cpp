@@ -16,7 +16,7 @@ namespace pipeliner {
                 if (prevBlock_) {
                     chunk = prevBlock_->waitChunk();
                     if (!chunk) {
-                        throw std::runtime_error{"Block has not returned chunk"};
+                        continue;
                     }
                     shouldStop = chunk->getType() == DataChunk::End;
                 }
