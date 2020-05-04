@@ -26,10 +26,11 @@ add_executable(pipeliner_tester
         test/basic_block_test.cpp
         test/generator_block_test.cpp
         test/filter_block_test.cpp
+        test/generator_and_filter_test.cpp
         )
 
 
-# Unit tests
+# Tests
 
 file(COPY test/data DESTINATION .)
 target_link_libraries(pipeliner_tester pipeliner)
