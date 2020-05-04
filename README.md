@@ -13,10 +13,12 @@ random numbers, and FilterBlock, which filters data by some threshold value:
 
 ```cpp
 // Block b2 is linked to it's previous block b1, so blocks are chained
-together: RandomNumberGeneratorBlock b1{}; FilterBlock b2{128, &b1};
+// together: 
+RandomNumberGeneratorBlock b1{};
+FilterBlock b2{128, &b1};
 
 // We start and stop last block in a chain, all other blocks started and
-stopped recursively
+// stopped recursively
 b2.start();
 for (int i = 0; i != 100; ++i) {
     b2.waitChunk();
