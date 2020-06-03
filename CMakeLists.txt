@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Threads)
 
 set(PIPELINER_INCLUDE_FILES
+        include/pipeliner/debug.h
         include/pipeliner/basic_block.h
         include/pipeliner/generator_block.h
         include/pipeliner/filter_block.h)

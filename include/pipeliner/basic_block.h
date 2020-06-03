@@ -5,6 +5,8 @@
 #include <condition_variable>
 #include <cstdint>
 
+#include <pipeliner/debug.h>
+
 namespace pipeliner {
 
     using Uint8 = std::uint8_t;
@@ -43,6 +45,8 @@ namespace pipeliner {
 
         virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
 
+        Debug &debug() { return debug_; }
+
     private:
         BasicBlock *const prevBlock_;
         std::unique_ptr<DataChunk> chunk_;
@@ -51,6 +55,7 @@ namespace pipeliner {
         std::unique_ptr<std::thread> thread_;
         std::condition_variable cv_;
         mutable std::mutex mutex_, joinMutex_;
+        Debug debug_;
     };
 
 }

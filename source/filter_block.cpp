@@ -25,6 +25,7 @@ namespace pipeliner {
             filteredChunk->data2 = chunk->data2;
             filteredChunk->filt1 = value1 >= thresholdValue_;
             filteredChunk->filt2 = value2 >= thresholdValue_;
+            debug().addText(std::to_string(filteredChunk->filt1) + std::to_string(filteredChunk->filt2));
             return std::move(filteredChunk);
         }
         return nullptr;

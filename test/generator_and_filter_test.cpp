@@ -1,6 +1,8 @@
 #include <pipeliner/generator_block.h>
 #include <pipeliner/filter_block.h>
 
+#include <iostream>
+
 #include "catch.hpp"
 
 namespace pipeliner {
@@ -9,13 +11,21 @@ namespace pipeliner {
         RandomNumberGeneratorBlock b1{};
         FilterBlock b2{128, &b1};
 
+        b1.debug().enable();
+        b2.debug().enable();
+
         b2.start();
 
-        for (int i = 0; i != 100; ++i) {
+        for (int i = 0; i != 40; ++i) {
             b2.waitChunk();
         }
 
         b2.stop();
+
+        for (auto l1 = b1.debug().popLine(), l2 = b2.debug().popLine();
+                l1.size() != 0 && l2.size() != 0; ) {
+           std::cout << l1 << " | " << l2 << std::endl;
+        }
     }
 
     TEST_CASE("CsvReader", "[GeneratorAndFilterTest]") {
