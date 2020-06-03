@@ -7,12 +7,11 @@
 
 namespace pipeliner {
 
-    TEST_CASE("RandomNumberGenerator", "[GeneratorAndFilterTest]") {
-        RandomNumberGeneratorBlock b1{5000ns};
-        FilterBlock b2{128, &b1};
+    const auto generatorBlockDelay = 4ms;
 
-        b1.debug().enable();
-        b2.debug().enable();
+    TEST_CASE("RandomNumberGenerator", "[GeneratorAndFilterTest]") {
+        RandomNumberGeneratorBlock b1{generatorBlockDelay};
+        FilterBlock b2{128, &b1};
 
         b2.start();
 
@@ -22,12 +21,11 @@ namespace pipeliner {
 
         b2.stop();
 
-        std::string l1, l2;
+        std::string l2;
         do {
-            auto l1 = b1.debug().popLine();
             auto l2 = b2.debug().popLine();
-            std::cout << l1 << " | " << l2 << std::endl;
-        } while (l1.size() != 0 && l2.size() != 0);
+            std::cout << l2 << std::endl;
+        } while (l2.size() != 0);
 
         REQUIRE(b1.lostChunksCount() == 0);
         REQUIRE(b2.lostChunksCount() == 0);
@@ -35,7 +33,7 @@ namespace pipeliner {
 
     TEST_CASE("CsvReader", "[GeneratorAndFilterTest]") {
         const auto csvFile = std::filesystem::path{} / "data" / "MOCK_DATA_16_100.csv";
-        CsvReaderBlock b1{csvFile};
+        CsvReaderBlock b1{csvFile, generatorBlockDelay};
         FilterBlock b2{128, &b1};
 
         b2.start();
@@ -46,5 +44,8 @@ namespace pipeliner {
         }
 
         b2.stop();
+
+        REQUIRE(b1.lostChunksCount() == 0);
+        REQUIRE(b2.lostChunksCount() == 0);
     }
 }

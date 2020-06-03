@@ -1,32 +1,29 @@
+#pragma once
+
 #include <queue>
-#include <string>
+#include <sstream>
+
+#ifdef PILI_DEBUG_ENABLED
+#   define PILI_DEBUG_ADDTEXT(x) debug().addText() << x
+#   define PILI_DEBUG_NEWLINE() debug().addLine()
+#else
+#   define PILI_DEBUG_ADDTEXT(x) do {} while (false)
+#   define PILI_DEBUG_NEWLINE() do {} while (false)
+#endif
 
 namespace pipeliner {
 
     class Debug {
     public:
-        Debug() : enabled_{false} {}
+        Debug() { addLine(); }
 
-        void enable() {
-            enabled_ = true;
-            addLine();
-        }
+        std::stringstream &addText() { return lines_.back(); }
 
-        void addText(const std::string &s) {
-            if (enabled_) {
-                lines_.back() += s;
-            }
-        }
-
-        void addLine() {
-            if (enabled_) {
-                lines_.push({});
-            }
-        }
+        void addLine() { lines_.push({}); }
 
         std::string popLine() {
             if (lines_.size()) {
-                auto l = lines_.front();
+                auto l = lines_.front().str();
                 lines_.pop();
                 return l;
             } else {
@@ -35,8 +32,7 @@ namespace pipeliner {
         }
 
     private:
-        bool enabled_;
-        std::queue<std::string> lines_;
+        std::queue<std::stringstream> lines_;
     };
 
 }

@@ -5,10 +5,14 @@
 
 namespace pipeliner {
 
-    CsvReaderBlock::CsvReaderBlock(const std::filesystem::path &csvFile)
-            : BasicBlock{nullptr}, reader_{csvFile.string()}, row_{}, iter_{16} { row_.resize(16); }
+    CsvReaderBlock::CsvReaderBlock(const std::filesystem::path &csvFile,
+                                   std::chrono::duration<double> delay)
+            : BasicBlock{nullptr}, delay_{delay},
+              reader_{csvFile.string()}, row_{}, iter_{16} { row_.resize(16); }
 
     std::unique_ptr<DataChunk> CsvReaderBlock::processChunk(std::unique_ptr<DataChunk>) {
+        std::this_thread::sleep_for(delay_);
+
         if (iter_ == row_.size()) {
             iter_ = 0;
             if (!reader_.read_row(
@@ -26,8 +30,8 @@ namespace pipeliner {
         return std::move(chunk);
     }
 
-    RandomNumberGeneratorBlock::RandomNumberGeneratorBlock(std::chrono::duration<double> delayNs)
-            : BasicBlock{nullptr}, delay_{delayNs} { std::srand(std::time(nullptr)); }
+    RandomNumberGeneratorBlock::RandomNumberGeneratorBlock(std::chrono::duration<double> delay)
+            : BasicBlock{nullptr}, delay_{delay} { std::srand(std::time(nullptr)); }
 
     std::unique_ptr<DataChunk> RandomNumberGeneratorBlock::processChunk(std::unique_ptr<DataChunk>) {
         std::this_thread::sleep_for(delay_);
@@ -36,7 +40,6 @@ namespace pipeliner {
         chunk->data1 = std::rand() % std::numeric_limits<Uint8>::max();
         chunk->data2 = std::rand() % std::numeric_limits<Uint8>::max();
 
-        debug().addText(std::to_string(chunk->data1) + " " + std::to_string(chunk->data2) + " ");
         return std::move(chunk);
     }
 

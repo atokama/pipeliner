@@ -15,11 +15,13 @@ namespace pipeliner {
 
     class CsvReaderBlock : public BasicBlock {
     public:
-        CsvReaderBlock(const std::filesystem::path &csvFile);
+        CsvReaderBlock(const std::filesystem::path &csvFile,
+                       std::chrono::duration<double> delay = 500ns);
 
         std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override;
 
     private:
+        const std::chrono::duration<double, std::nano> delay_;
         io::CSVReader<16> reader_;
         std::vector<Uint8> row_;
         std::size_t iter_;
@@ -27,7 +29,7 @@ namespace pipeliner {
 
     class RandomNumberGeneratorBlock : public BasicBlock {
     public:
-        RandomNumberGeneratorBlock(std::chrono::duration<double> delayNs = 500ns);
+        RandomNumberGeneratorBlock(std::chrono::duration<double> delay = 500ns);
 
         std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override;
 

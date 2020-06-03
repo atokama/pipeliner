@@ -3,6 +3,8 @@ project(Pipeliner)
 
 set(CMAKE_CXX_STANDARD 17)
 
+option(PILI_DEBUG_ENABLED "Enable debug (this will increase processing time)" ON)
+
 find_package(Threads)
 
 set(PIPELINER_INCLUDE_FILES
@@ -23,6 +25,9 @@ add_library(pipeliner ${PIPELINER_INCLUDE_FILES} ${PIPELINER_SOURCE_FILES})
 target_include_directories(pipeliner PUBLIC include)
 target_include_directories(pipeliner SYSTEM PUBLIC dependencies)
 target_link_libraries(pipeliner ${CMAKE_THREAD_LIBS_INIT})
+if (PILI_DEBUG_ENABLED)
+    target_compile_definitions(pipeliner PUBLIC PILI_DEBUG_ENABLED)
+endif ()
 
 
 # Tests
