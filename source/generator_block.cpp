@@ -26,10 +26,12 @@ namespace pipeliner {
         return std::move(chunk);
     }
 
-    RandomNumberGeneratorBlock::RandomNumberGeneratorBlock()
-            : BasicBlock{nullptr} { std::srand(std::time(nullptr)); }
+    RandomNumberGeneratorBlock::RandomNumberGeneratorBlock(std::chrono::duration<double> delayNs)
+            : BasicBlock{nullptr}, delay_{delayNs} { std::srand(std::time(nullptr)); }
 
     std::unique_ptr<DataChunk> RandomNumberGeneratorBlock::processChunk(std::unique_ptr<DataChunk>) {
+        std::this_thread::sleep_for(delay_);
+
         auto chunk = std::make_unique<DataChunk>();
         chunk->data1 = std::rand() % std::numeric_limits<Uint8>::max();
         chunk->data2 = std::rand() % std::numeric_limits<Uint8>::max();

@@ -8,7 +8,7 @@
 namespace pipeliner {
 
     TEST_CASE("RandomNumberGenerator", "[GeneratorAndFilterTest]") {
-        RandomNumberGeneratorBlock b1{};
+        RandomNumberGeneratorBlock b1{5000ns};
         FilterBlock b2{128, &b1};
 
         b1.debug().enable();
@@ -16,16 +16,21 @@ namespace pipeliner {
 
         b2.start();
 
-        for (int i = 0; i != 40; ++i) {
+        for (int i = 0; i != 10; ++i) {
             b2.waitChunk();
         }
 
         b2.stop();
 
-        for (auto l1 = b1.debug().popLine(), l2 = b2.debug().popLine();
-                l1.size() != 0 && l2.size() != 0; ) {
-           std::cout << l1 << " | " << l2 << std::endl;
-        }
+        std::string l1, l2;
+        do {
+            auto l1 = b1.debug().popLine();
+            auto l2 = b2.debug().popLine();
+            std::cout << l1 << " | " << l2 << std::endl;
+        } while (l1.size() != 0 && l2.size() != 0);
+
+        REQUIRE(b1.lostChunksCount() == 0);
+        REQUIRE(b2.lostChunksCount() == 0);
     }
 
     TEST_CASE("CsvReader", "[GeneratorAndFilterTest]") {

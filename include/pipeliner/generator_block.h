@@ -3,12 +3,15 @@
 #include <filesystem>
 #include <cstdint>
 #include <vector>
+#include <chrono>
 
 #include <csv.h>
 
 #include <pipeliner/basic_block.h>
 
 namespace pipeliner {
+
+    using namespace std::chrono_literals;
 
     class CsvReaderBlock : public BasicBlock {
     public:
@@ -24,9 +27,12 @@ namespace pipeliner {
 
     class RandomNumberGeneratorBlock : public BasicBlock {
     public:
-        RandomNumberGeneratorBlock();
+        RandomNumberGeneratorBlock(std::chrono::duration<double> delayNs = 500ns);
 
         std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override;
+
+    private:
+        const std::chrono::duration<double, std::nano> delay_;
     };
 
 }
