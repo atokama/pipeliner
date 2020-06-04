@@ -11,12 +11,14 @@ set(PIPELINER_INCLUDE_FILES
         include/pipeliner/debug.h
         include/pipeliner/basic_block.h
         include/pipeliner/generator_block.h
-        include/pipeliner/filter_block.h)
+        include/pipeliner/filter_block.h
+        include/pipeliner/labelling_block.h)
 
 set(PIPELINER_SOURCE_FILES
         source/basic_block.cpp
         source/generator_block.cpp
-        source/filter_block.cpp)
+        source/filter_block.cpp
+        source/labelling_block.cpp)
 
 source_group("Include Files" FILES ${PIPELINER_INCLUDE_FILES})
 source_group("Source Files" FILES ${PIPELINER_SOURCE_FILES})
@@ -37,7 +39,8 @@ set(PIPELINER_TESTER_FILES
         test/basic_block_test.cpp
         test/generator_block_test.cpp
         test/filter_block_test.cpp
-        test/generator_and_filter_test.cpp)
+        test/generator_and_filter_test.cpp
+        test/labelling_block_test.cpp)
 
 source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
 
