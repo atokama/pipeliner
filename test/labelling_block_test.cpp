@@ -8,7 +8,7 @@ namespace pipeliner {
     TEST_CASE("LabellingBlock", "[LabellingBlock]") {
 
         const auto generatorBlockDelay = 6ms;
-        const int threshold = 160;
+        const int threshold = 128;
         const int width = 16;
 
         RandomNumberGeneratorBlock b1{generatorBlockDelay};

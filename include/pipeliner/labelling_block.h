@@ -53,7 +53,6 @@ namespace pipeliner {
             labelledChunk->labels[0] = processElement(filteredChunk->filt1, labelledChunk->merge);
             labelledChunk->labels[1] = processElement(filteredChunk->filt2, labelledChunk->merge);
 
-            PILI_DEBUG_ADDTEXT(labelledChunk->labels[0] << labelledChunk->labels[1]);
             for (const auto &merge : labelledChunk->merge) {
                    PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
             }
@@ -64,6 +63,8 @@ namespace pipeliner {
                 std::swap(prevRow_, curRow_);
                 PILI_DEBUG_NEWLINE();
             }
+
+            PILI_DEBUG_ADDTEXT("; ");
 
             return std::move(labelledChunk);
         }
@@ -100,6 +101,9 @@ namespace pipeliner {
                 }
             }
 
+            if (label) {
+                PILI_DEBUG_ADDTEXT(pos_.col << "(" << label << ") ");
+            }
 
             curRow_[pos_.col] = label;
             ++pos_.col;
