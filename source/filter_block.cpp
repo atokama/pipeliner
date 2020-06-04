@@ -13,6 +13,8 @@ namespace pipeliner {
             return nullptr;
         }
 
+        std::unique_ptr<FilteredChunk> filteredChunk{nullptr};
+
         buf_.push_back(chunk->data1);
         buf_.push_back(chunk->data2);
         if (buf_.size() == 10) {
@@ -21,16 +23,24 @@ namespace pipeliner {
             buf_.pop_front();
             buf_.pop_front();
 
-            auto filteredChunk = std::make_unique<FilteredChunk>();
+            filteredChunk = std::make_unique<FilteredChunk>();
+
             filteredChunk->data1 = chunk->data1;
             filteredChunk->data2 = chunk->data2;
             filteredChunk->filt1 = value1 >= thresholdValue_;
             filteredChunk->filt2 = value2 >= thresholdValue_;
 
             PILI_DEBUG_ADDTEXT(filteredChunk->filt1 << filteredChunk->filt2);
-            return std::move(filteredChunk);
         }
-        return nullptr;
+
+        curWidth_ += 2;
+        if (curWidth_ >= width_) {
+            curWidth_ = 0;
+            buf_.clear();
+            PILI_DEBUG_NEWLINE();
+        }
+
+        return filteredChunk;
     }
 
     double FilterBlock::computeValue(std::list<Uint8>::const_iterator bufIter) {

@@ -8,6 +8,8 @@
 
 namespace pipeliner {
 
+    using Size = std::size_t;
+
     class FilteredChunk : public DataChunk {
     public:
         FilteredChunk(DataChunk::Type type = DataChunk::Data) : DataChunk{type} {}
@@ -17,9 +19,9 @@ namespace pipeliner {
 
     class FilterBlock : public BasicBlock {
     public:
-        FilterBlock(double thresholdValue, BasicBlock *prev)
-                : BasicBlock{prev}, thresholdValue_{thresholdValue} {
-        }
+        FilterBlock(double thresholdValue, Size width, BasicBlock *prev)
+                : BasicBlock{prev}, thresholdValue_{thresholdValue},
+                  curWidth_{0}, width_{width} {}
 
         std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) override;
 
@@ -28,6 +30,8 @@ namespace pipeliner {
 
         std::list<Uint8> buf_;
         const double thresholdValue_;
+        Size curWidth_;
+        const Size width_;
         static const std::list<double> mul_;
     };
 }

@@ -8,10 +8,12 @@
 namespace pipeliner {
 
     const auto generatorBlockDelay = 4ms;
+    const Size width = 16;
+    const double threshold = 128;
 
     TEST_CASE("RandomNumberGenerator", "[GeneratorAndFilterTest]") {
         RandomNumberGeneratorBlock b1{generatorBlockDelay};
-        FilterBlock b2{128, &b1};
+        FilterBlock b2{threshold, width, &b1};
 
         b2.start();
 
@@ -23,7 +25,7 @@ namespace pipeliner {
 
         std::string l2;
         do {
-            auto l2 = b2.debug().popLine();
+            l2 = b2.debug().popLine();
             std::cout << l2 << std::endl;
         } while (l2.size() != 0);
 
@@ -34,7 +36,7 @@ namespace pipeliner {
     TEST_CASE("CsvReader", "[GeneratorAndFilterTest]") {
         const auto csvFile = std::filesystem::path{} / "data" / "MOCK_DATA_16_100.csv";
         CsvReaderBlock b1{csvFile, generatorBlockDelay};
-        FilterBlock b2{128, &b1};
+        FilterBlock b2{threshold, width, &b1};
 
         b2.start();
 
