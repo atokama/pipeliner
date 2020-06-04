@@ -30,7 +30,6 @@ namespace pipeliner {
                     if (shouldStop) {
                         chunk_ = std::make_unique<DataChunk>(DataChunk::End);
                     } else {
-                        if (chunk_) { lostChunks_++; }
                         chunk_ = std::move(processedChunk);
                     }
                 }
@@ -38,16 +37,25 @@ namespace pipeliner {
                 cv_.notify_one();
 
                 if (shouldStop) { break; }
-            }
 
+                {
+                    UniqueLock lock{mutex_};
+                    cv_.wait(lock, [this] { return chunk_ == nullptr || shouldStop_; });
+                }
+            }
         });
     }
 
     std::unique_ptr<DataChunk> BasicBlock::waitChunk() {
-        UniqueLock lock{mutex_};
-        cv_.wait(lock, [this] { return chunk_ != nullptr; });
-        auto c = std::move(chunk_);
-        chunk_ = nullptr;
+        std::unique_ptr<DataChunk> c{nullptr};
+        {
+            UniqueLock lock{mutex_};
+            cv_.wait(lock, [this] { return chunk_ != nullptr; });
+            c = std::move(chunk_);
+            chunk_ = nullptr;
+        }
+
+        cv_.notify_one();
         return std::move(c);
     }
 
@@ -57,16 +65,12 @@ namespace pipeliner {
                 LockGuard lock{mutex_};
                 shouldStop_ = true;
             }
+            cv_.notify_one();
             LockGuard lock{joinMutex_};
             if (thread_->joinable()) { thread_->join(); }
         }
 
         if (prevBlock_) { prevBlock_->stop(); }
-    }
-
-    int BasicBlock::lostChunksCount() const {
-        LockGuard lock{mutex_};
-        return lostChunks_;
     }
 
 }

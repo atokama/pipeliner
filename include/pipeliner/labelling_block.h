@@ -54,7 +54,7 @@ namespace pipeliner {
             labelledChunk->labels[1] = processElement(filteredChunk->filt2, labelledChunk->merge);
 
             for (const auto &merge : labelledChunk->merge) {
-                   PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
+                PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
             }
 
             if (pos_.col >= width_) {

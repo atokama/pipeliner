@@ -41,8 +41,6 @@ namespace pipeliner {
 
         void stop();
 
-        int lostChunksCount() const;
-
         virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
 
         Debug &debug() { return debug_; }
@@ -50,7 +48,6 @@ namespace pipeliner {
     private:
         BasicBlock *const prevBlock_;
         std::unique_ptr<DataChunk> chunk_;
-        int lostChunks_{0};
         bool shouldStop_{false};
         std::unique_ptr<std::thread> thread_;
         std::condition_variable cv_;
