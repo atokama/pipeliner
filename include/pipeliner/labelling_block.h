@@ -59,7 +59,7 @@ namespace pipeliner {
     class LabellingBlock : public BasicBlock {
     public:
         LabellingBlock(Size width, BasicBlock *prev)
-                : BasicBlock{prev}, width_{width}, labelSet_{width / 2}, pos_{} {
+                : BasicBlock{prev}, width_{width}, labelSet_{width / 2 + 1}, pos_{} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
         }
@@ -67,7 +67,7 @@ namespace pipeliner {
         std::unique_ptr<DataChunk>
         processChunk(std::unique_ptr<DataChunk> chunk) override {
             if (chunk->getType() == DataChunk::End) {
-                return nullptr;
+                return std::move(chunk);
             }
             auto filteredChunk = dynamic_cast<FilteredChunk *>(chunk.get());
             if (!filteredChunk) {

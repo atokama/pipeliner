@@ -31,32 +31,29 @@ namespace pipeliner {
 
         std::unique_ptr<DataChunk>
         processChunk(std::unique_ptr<DataChunk> chunk) override {
-            if (chunk->getType() == DataChunk::End) {
-                return nullptr;
-            }
-            auto labelledChunk = dynamic_cast<LabelledChunk *>(chunk.get());
-            if (!labelledChunk) {
-                return nullptr;
-            }
-
             auto computedChunk = std::make_unique<ComputedChunk>();
 
-            auto pos1 = labelledChunk->pos;
-            auto pos2 = labelledChunk->pos;
-            pos2.col += 1;
+            if (auto labelledChunk = dynamic_cast<LabelledChunk *>(chunk.get())) {
+                auto pos1 = labelledChunk->pos;
+                auto pos2 = labelledChunk->pos;
+                pos2.col += 1;
 
-            processLabel(labelledChunk->labels[0], pos1);
-            processLabel(labelledChunk->labels[1], pos2);
+                processLabel(labelledChunk->labels[0], pos1);
+                processLabel(labelledChunk->labels[1], pos2);
 
-            for (const auto &merge : labelledChunk->merges) {
-                processMerge(merge, *labelledChunk->labelSet);
+                for (const auto &merge : labelledChunk->merges) { processMerge(merge, *labelledChunk->labelSet); }
+
+                processFinishedLabels(pos1, *labelledChunk->labelSet, computedChunk->labelData);
+                processFinishedLabels(pos2, *labelledChunk->labelSet, computedChunk->labelData);
             }
 
-            processFinishedLabels(pos1, *labelledChunk->labelSet, computedChunk->labelData);
-            processFinishedLabels(pos2, *labelledChunk->labelSet, computedChunk->labelData);
-
-            if (computedChunk->labelData.empty()) {
-                return nullptr;
+            // Finish all labels on the end
+            if (chunk->getType() == DataChunk::End) {
+                computedChunk->setType(DataChunk::End);
+                for (auto iter = computedLabels_.begin(); iter != computedLabels_.end();) {
+                    computedChunk->labelData.push_back(iter->second);
+                    iter = computedLabels_.erase(iter);
+                }
             }
 
             for (const auto &ld : computedChunk->labelData) {
@@ -65,6 +62,10 @@ namespace pipeliner {
                                  << " topLeft:" << ld.rect.topLeft.row << "," << ld.rect.topLeft.col
                                  << " bottomRight:" << ld.rect.bottomRight.row << "," << ld.rect.bottomRight.col);
                 PILI_DEBUG_NEWLINE();
+            }
+
+            if (computedChunk->labelData.empty() && chunk->getType() != DataChunk::End) {
+                return nullptr;
             }
 
             return std::move(computedChunk);
@@ -116,8 +117,8 @@ namespace pipeliner {
             }
         }
 
-        void
-        processFinishedLabels(const Pos &pos, LabelSet &labelSet, std::vector<LabelData> &finishedLabels) {
+        void processFinishedLabels(const Pos &pos, LabelSet &labelSet,
+                                   std::vector<LabelData> &finishedLabels) {
             for (auto iter = computedLabels_.begin(); iter != computedLabels_.end();) {
                 auto &c = iter->second;
                 if (pos.row > c.rect.bottomRight.row + 1) {

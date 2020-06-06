@@ -10,7 +10,7 @@ namespace pipeliner {
 
     std::unique_ptr<DataChunk> FilterBlock::processChunk(std::unique_ptr<DataChunk> chunk) {
         if (chunk->getType() == DataChunk::End) {
-            return nullptr;
+            return std::move(chunk);
         }
 
         std::unique_ptr<FilteredChunk> filteredChunk{nullptr};

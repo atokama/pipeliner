@@ -23,10 +23,12 @@ namespace pipeliner {
 
         Type getType() const { return type_; }
 
+        void setType(Type type) { type_ = type; }
+
         Uint8 data1, data2;
 
     private:
-        const Type type_;
+        Type type_;
     };
 
     class BasicBlock {
