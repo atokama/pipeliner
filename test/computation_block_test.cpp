@@ -11,7 +11,7 @@ namespace pipeliner {
 
         const auto generatorBlockDelay = 0ms;
         const int threshold = 128;
-        const int width = 24;
+        const int width = 32;
 
         RandomNumberGeneratorBlock b1{generatorBlockDelay};
         FilterBlock b2{threshold, width, &b1};
@@ -21,23 +21,23 @@ namespace pipeliner {
         b4.start();
 
         for (int i = 0; i != 10; ++i) {
-            const auto computedChunk = dynamic_cast<ComputedChunk *>(b4.waitChunk().get());
-            for (const auto &ld : computedChunk->labelData) {
-                std::cout << "label:" << ld.label << " size:" << ld.size
-                          << " topLeft:" << ld.rect.topLeft.row << "," << ld.rect.topLeft.col
-                          << " bottomRight:" << ld.rect.bottomRight.row << "," << ld.rect.bottomRight.col
-                          << "\n";
-            }
+            b4.waitChunk();
         }
 
         b4.stop();
 
-        std::string l2, l3;
+        std::string l2;
         do {
             l2 = b2.debug().popLine();
-            l3 = b3.debug().popLine();
-            std::cout << l2 << " | " << l3 << std::endl;
-        } while (l2.size() != 0 || l3.size() != 0);
+            std::cout << l2 << std::endl;
+        } while (l2.size() != 0);
 
+        std::cout << std::endl;
+
+        std::string l4;
+        do {
+            l4 = b4.debug().popLine();
+            std::cout << l4 << std::endl;
+        } while (l4.size() != 0);
     }
 }

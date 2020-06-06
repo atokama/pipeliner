@@ -59,6 +59,14 @@ namespace pipeliner {
                 return nullptr;
             }
 
+            for (const auto &ld : computedChunk->labelData) {
+                PILI_DEBUG_ADDTEXT(
+                        "label:" << ld.label << " size:" << ld.size
+                                 << " topLeft:" << ld.rect.topLeft.row << "," << ld.rect.topLeft.col
+                                 << " bottomRight:" << ld.rect.bottomRight.row << "," << ld.rect.bottomRight.col);
+                PILI_DEBUG_NEWLINE();
+            }
+
             return std::move(computedChunk);
         }
 

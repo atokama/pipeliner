@@ -30,14 +30,16 @@ namespace pipeliner {
             filteredChunk->filt1 = value1 >= thresholdValue_;
             filteredChunk->filt2 = value2 >= thresholdValue_;
 
-            PILI_DEBUG_ADDTEXT((filteredChunk->filt1 ? 'x' : '0') << (filteredChunk->filt2 ? 'x' : '0'));
+            PILI_DEBUG_ADDTEXT((filteredChunk->filt1 ? 'x' : '_') << (filteredChunk->filt2 ? 'x' : '_'));
         }
 
-        curWidth_ += 2;
-        if (curWidth_ >= width_) {
-            curWidth_ = 0;
-            buf_.clear();
+        pos_.col += 2;
+        if (pos_.col >= width_) {
+            PILI_DEBUG_ADDTEXT("; " << pos_.row);
             PILI_DEBUG_NEWLINE();
+            pos_.col = 0;
+            ++pos_.row;
+            buf_.clear();
         }
 
         return filteredChunk;

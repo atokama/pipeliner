@@ -13,11 +13,6 @@ namespace pipeliner {
     using Uint16 = std::uint16_t;
     using LockGuard = std::lock_guard<std::mutex>;
 
-    struct Pos {
-        Size row;
-        Size col;
-    };
-
     struct Merge {
         Uint16 label1;
         Uint16 label2;
@@ -43,7 +38,6 @@ namespace pipeliner {
         void put(Uint16 label) {
             LockGuard lock{mutex_};
             auto p = labels_.insert(label);
-//            assert(p.second == true && "Label insertion must be succesfull");
         }
 
     private:
@@ -65,7 +59,7 @@ namespace pipeliner {
     class LabellingBlock : public BasicBlock {
     public:
         LabellingBlock(Size width, BasicBlock *prev)
-                : BasicBlock{prev}, width_{width}, labelSet_{width}, pos_{} {
+                : BasicBlock{prev}, width_{width}, labelSet_{width / 2}, pos_{} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
         }
@@ -95,7 +89,6 @@ namespace pipeliner {
                 pos_.row += 1;
                 std::swap(prevRow_, curRow_);
                 PILI_DEBUG_NEWLINE();
-                PILI_DEBUG_ADDTEXT(pos_.row);
             }
 
             PILI_DEBUG_ADDTEXT("; ");
