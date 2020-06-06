@@ -3,12 +3,15 @@
 #include <cstdint>
 #include <algorithm>
 #include <set>
+#include <mutex>
+#include <cassert>
 
 #include <pipeliner/filter_block.h>
 
 namespace pipeliner {
 
     using Uint16 = std::uint16_t;
+    using LockGuard = std::lock_guard<std::mutex>;
 
     struct Pos {
         Size row;
@@ -20,19 +23,49 @@ namespace pipeliner {
         Uint16 label2;
     };
 
+    class LabelSet {
+    public:
+        LabelSet(Size size) {
+            for (Uint16 label{1}; label != size + 1; ++label) {
+                labels_.insert(label);
+            }
+        }
+
+        Uint16 get() {
+            LockGuard lock{mutex_};
+            assert(!labels_.empty() && "LabelSet must not be empty");
+            auto iter = labels_.begin();
+            auto label = *iter;
+            labels_.erase(iter);
+            return label;
+        }
+
+        void put(Uint16 label) {
+            LockGuard lock{mutex_};
+            auto p = labels_.insert(label);
+//            assert(p.second == true && "Label insertion must be succesfull");
+        }
+
+    private:
+        std::mutex mutex_;
+        std::set<Uint16> labels_;
+    };
+
     class LabelledChunk : public DataChunk {
     public:
-        LabelledChunk(DataChunk::Type type = DataChunk::Data) : DataChunk{type} {}
+        LabelledChunk(LabelSet *labelSet, DataChunk::Type type = DataChunk::Data)
+                : DataChunk{type}, labelSet{labelSet} {}
 
         Pos pos = {};
         Uint16 labels[2] = {0, 0};
-        std::vector<Merge> merge;
+        std::vector<Merge> merges;
+        LabelSet *labelSet;
     };
 
     class LabellingBlock : public BasicBlock {
     public:
         LabellingBlock(Size width, BasicBlock *prev)
-                : BasicBlock{prev}, width_{width}, label_{1}, pos_{} {
+                : BasicBlock{prev}, width_{width}, labelSet_{width}, pos_{} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
         }
@@ -47,13 +80,13 @@ namespace pipeliner {
                 return nullptr;
             }
 
-            auto labelledChunk = std::make_unique<LabelledChunk>();
+            auto labelledChunk = std::make_unique<LabelledChunk>(&labelSet_);
             labelledChunk->pos = pos_;
 
-            labelledChunk->labels[0] = processElement(filteredChunk->filt1, labelledChunk->merge);
-            labelledChunk->labels[1] = processElement(filteredChunk->filt2, labelledChunk->merge);
+            labelledChunk->labels[0] = processElement(filteredChunk->filt1, labelledChunk->merges);
+            labelledChunk->labels[1] = processElement(filteredChunk->filt2, labelledChunk->merges);
 
-            for (const auto &merge : labelledChunk->merge) {
+            for (const auto &merge : labelledChunk->merges) {
                 PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
             }
 
@@ -62,6 +95,7 @@ namespace pipeliner {
                 pos_.row += 1;
                 std::swap(prevRow_, curRow_);
                 PILI_DEBUG_NEWLINE();
+                PILI_DEBUG_ADDTEXT(pos_.row);
             }
 
             PILI_DEBUG_ADDTEXT("; ");
@@ -89,7 +123,7 @@ namespace pipeliner {
                     if (n4 != 0) { neibhors.push_back(n4); }
                 }
                 if (neibhors.empty()) {
-                    label = label_++;
+                    label = labelSet_.get();
                 } else {
                     std::sort(neibhors.begin(), neibhors.end());
                     label = neibhors[0];
@@ -113,7 +147,7 @@ namespace pipeliner {
     private:
         const Size width_;
         std::vector<Uint16> prevRow_, curRow_;
-        Uint16 label_;
+        LabelSet labelSet_;
         Pos pos_;
     };
 }
