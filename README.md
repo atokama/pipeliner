@@ -62,14 +62,14 @@ public:
 
 Architecture remain unchanged, but one error was fixed:
 
-If block A produces data too fast, next block B has no time to process chunk
-and some chunks from the block A are lost (overwritten by block A on the next iteration). 
+If block A processes chunks too fast, next block B has no time to process each chunk from block A
+and some chunks are lost (overwritten by block A on the next iteration). 
 
 I see two solutions to this problem: 
 a) Add buffer queue for chunks, so processed chunks pushed to the queue and next block pops them 
 when ready.
-b) On each iteration, after processing chunk, before starting next iteration, wait for the next block to 
-grab the chunk.
+b) On each iteration, after chunk processing and before starting next iteration, wait for the next 
+block to grab the chunk.
 
 Case a) is faster, because block work on maximum possible speed and don't wait for the
 next block. 
