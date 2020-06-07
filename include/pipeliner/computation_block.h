@@ -67,6 +67,7 @@ namespace pipeliner {
             }
 
             if (computedChunk->labelData.empty() && chunk->getType() != DataChunk::End) {
+                // Nothing to output: no finished labels, not the last chunk
                 return nullptr;
             }
 
@@ -109,7 +110,7 @@ namespace pipeliner {
                                       c1.rect.topLeft.col : c2.rect.topLeft.col;
                 c1.rect.topLeft.row = c1.rect.topLeft.row < c2.rect.topLeft.row ?
                                       c1.rect.topLeft.row : c2.rect.topLeft.row;
-                c1.rect.bottomRight.col = c1.rect.bottomRight.col > c1.rect.bottomRight.col ?
+                c1.rect.bottomRight.col = c1.rect.bottomRight.col > c2.rect.bottomRight.col ?
                                           c1.rect.bottomRight.col : c2.rect.bottomRight.col;
                 c1.rect.bottomRight.row = c1.rect.bottomRight.row > c2.rect.bottomRight.row ?
                                           c1.rect.bottomRight.row : c2.rect.bottomRight.row;
