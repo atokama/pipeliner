@@ -107,7 +107,7 @@ namespace pipeliner {
                                       c1.rect.topLeft.row : c2.rect.topLeft.row;
                 c1.rect.bottomRight.col = c1.rect.bottomRight.col > c1.rect.bottomRight.col ?
                                           c1.rect.bottomRight.col : c2.rect.bottomRight.col;
-                c1.rect.bottomRight.row = c1.rect.bottomRight.row > c1.rect.bottomRight.row ?
+                c1.rect.bottomRight.row = c1.rect.bottomRight.row > c2.rect.bottomRight.row ?
                                           c1.rect.bottomRight.row : c2.rect.bottomRight.row;
 
                 // Recycle label after merge

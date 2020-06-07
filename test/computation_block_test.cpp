@@ -115,5 +115,15 @@ namespace pipeliner {
             REQUIRE("label:1 size:2 topLeft:1,1 bottomRight:1,2" == t.popOutput());
         }
 
+        SECTION("labels merged") {
+            Tester t{};
+            t.pushInput("x__x");
+            t.pushInput("x__x");
+            t.pushInput("xxxx");
+
+            t.doTest();
+            REQUIRE("label:1 size:8 topLeft:0,0 bottomRight:2,3" == t.popOutput());
+        }
+
     }
 }
