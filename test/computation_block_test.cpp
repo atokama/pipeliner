@@ -140,18 +140,15 @@ namespace pipeliner {
 
         SECTION("diagonal labels 2") {
             Tester t{};
-            t.pushInput("xxxxx");
-            t.pushInput("_xxxx");
-            t.pushInput("__xxx");
-            t.pushInput("x__xx");
-            t.pushInput("xx__x");
+            t.pushInput("xxxxxx");
+            t.pushInput("_xxxxx");
+            t.pushInput("__xxxx");
+            t.pushInput("x__xxx");
+            t.pushInput("xx__xx");
 
             t.doTest();
-            REQUIRE("label:1 size:15 topLeft:0,0 bottomRight:4,4" == t.popOutput());
+            REQUIRE("label:1 size:20 topLeft:0,0 bottomRight:4,5" == t.popOutput());
             REQUIRE("label:2 size:3 topLeft:3,0 bottomRight:4,1" == t.popOutput());
         }
-
-
-
     }
 }
