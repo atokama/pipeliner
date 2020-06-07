@@ -18,6 +18,8 @@ namespace pipeliner {
         Uint16 label2;
     };
 
+    // LabelSet is a thread safe class, which contains set of available labels.
+    // It's instance will be forwarded to the next block (ComputationBlock) to release labels.
     class LabelSet {
     public:
         LabelSet(Size size) {
@@ -101,6 +103,7 @@ namespace pipeliner {
             std::vector<Uint16> neibhors;
 
             if (elem) {
+                // Here we consider west, north-west, north and north-east neibhors
                 if (pos_.col != 0) {
                     const auto n1 = curRow_[pos_.col - 1];
                     if (n1 != 0) { neibhors.push_back(n1); }
@@ -115,9 +118,13 @@ namespace pipeliner {
                     const auto n4 = prevRow_[pos_.col + 1];
                     if (n4 != 0) { neibhors.push_back(n4); }
                 }
+
                 if (neibhors.empty()) {
+                    // Element has no neibhors, assign new label
                     label = labelSet_.get();
                 } else {
+                    // Assign minimal label and merge with neibhors (there might be duplicate merges,
+                    // which will be ignored by the ComputationBlock
                     std::sort(neibhors.begin(), neibhors.end());
                     label = neibhors[0];
                     for (auto n : neibhors) {

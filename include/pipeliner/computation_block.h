@@ -44,7 +44,9 @@ namespace pipeliner {
                 processLabel(labelledChunk->labels[0], pos1);
                 processLabel(labelledChunk->labels[1], pos2);
 
-                for (const auto &merge : labelledChunk->merges) { processMerge(merge, *labelledChunk->labelSet); }
+                for (const auto &merge : labelledChunk->merges) {
+                    processMerge(merge, *labelledChunk->labelSet);
+                }
             }
 
             // Finish all labels on the end
@@ -75,6 +77,7 @@ namespace pipeliner {
             if (label == 0) {
                 return;
             } else if (computedLabels_.count(label)) {
+                // Recompute existing label
                 auto &c = computedLabels_.at(label);
                 ++c.size;
                 if (pos.col < c.rect.topLeft.col) { c.rect.topLeft.col = pos.col; }
@@ -82,6 +85,7 @@ namespace pipeliner {
                 if (pos.row < c.rect.topLeft.row) { c.rect.topLeft.row = pos.row; }
                 if (pos.row > c.rect.bottomRight.row) { c.rect.bottomRight.row = pos.row; }
             } else {
+                // Add new label
                 LabelData c{};
                 c.label = label;
                 c.size = 1;

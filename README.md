@@ -56,3 +56,39 @@ public:
 };
 
 ```
+
+
+## Update 
+
+Architecture remain unchanged, but one error was fixed:
+
+If block A produces data too fast, next block B has no time to process chunk
+and some chunks from the block A are lost (overwritten by block A on the next iteration). 
+
+I see two solutions to this problem: 
+a) Add buffer queue for chunks, so processed chunks pushed to the queue and next block pops them 
+when ready.
+b) On each iteration, after processing chunk, before starting next iteration, wait for the next block to 
+grab the chunk.
+
+Case a) is faster, because block work on maximum possible speed and don't wait for the
+next block. 
+Case b) has lower memory requirements, because chunk buffer is not required.
+
+I desided to implement case b) because 
+* We get time determinism: we know that block processes chunk, which was processed by the previous
+block exactly on the previous iteration.
+* I feel it's more suitable for requirements, where nothing said about buffer queue beetwen 
+blocks,
+* it takes minimal changes in code.
+
+(See commit #4f41a4f Fix error: lost chunks if block too fast)
+
+
+## Future improvements
+
+Need to add error reporting mechanism. We cannot use exceptions because blocks executed in their
+own thread. Class Error could be added to the DataChunk as a member. If an error has occurred in 
+the block, we must report error to the user and stop all the blocks:
+* errored block issues chunk with a error, which will be forwarded by the next blocks to the user
+* errored block calls stop() on previous block, which will stop all previous blocks recursively
