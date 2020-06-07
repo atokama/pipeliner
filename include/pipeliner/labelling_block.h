@@ -59,7 +59,7 @@ namespace pipeliner {
     class LabellingBlock : public BasicBlock {
     public:
         LabellingBlock(Size width, BasicBlock *prev)
-                : BasicBlock{prev}, width_{width}, labelSet_{width / 2 + 1}, pos_{} {
+                : BasicBlock{prev}, width_{width}, labelSet_{width}, pos_{} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
         }

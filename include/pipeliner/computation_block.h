@@ -38,13 +38,13 @@ namespace pipeliner {
                 auto pos2 = labelledChunk->pos;
                 pos2.col += 1;
 
+                processFinishedLabels(pos1, *labelledChunk->labelSet, computedChunk->labelData);
+                processFinishedLabels(pos2, *labelledChunk->labelSet, computedChunk->labelData);
+
                 processLabel(labelledChunk->labels[0], pos1);
                 processLabel(labelledChunk->labels[1], pos2);
 
                 for (const auto &merge : labelledChunk->merges) { processMerge(merge, *labelledChunk->labelSet); }
-
-                processFinishedLabels(pos1, *labelledChunk->labelSet, computedChunk->labelData);
-                processFinishedLabels(pos2, *labelledChunk->labelSet, computedChunk->labelData);
             }
 
             // Finish all labels on the end

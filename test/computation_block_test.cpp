@@ -97,6 +97,7 @@ namespace pipeliner {
             t.pushInput("____");
             t.pushInput("x_x_");
             t.pushInput("____");
+            t.pushInput("x_x_");
             t.pushInput("____");
 
             t.doTest();
@@ -104,6 +105,8 @@ namespace pipeliner {
             REQUIRE("label:2 size:1 topLeft:0,2 bottomRight:0,2" == t.popOutput());
             REQUIRE("label:1 size:1 topLeft:2,2 bottomRight:2,2" == t.popOutput());
             REQUIRE("label:3 size:1 topLeft:2,0 bottomRight:2,0" == t.popOutput());
+            REQUIRE("label:1 size:1 topLeft:4,2 bottomRight:4,2" == t.popOutput());
+            REQUIRE("label:2 size:1 topLeft:4,0 bottomRight:4,0" == t.popOutput());
         }
 
         SECTION("labels on the last line") {
@@ -124,6 +127,31 @@ namespace pipeliner {
             t.doTest();
             REQUIRE("label:1 size:8 topLeft:0,0 bottomRight:2,3" == t.popOutput());
         }
+
+        SECTION("diagonal labels") {
+            Tester t{};
+            t.pushInput("x_");
+            t.pushInput("_x");
+            t.pushInput("x_");
+
+            t.doTest();
+            REQUIRE("label:1 size:3 topLeft:0,0 bottomRight:2,1" == t.popOutput());
+        }
+
+        SECTION("diagonal labels 2") {
+            Tester t{};
+            t.pushInput("xxxxx");
+            t.pushInput("_xxxx");
+            t.pushInput("__xxx");
+            t.pushInput("x__xx");
+            t.pushInput("xx__x");
+
+            t.doTest();
+            REQUIRE("label:1 size:15 topLeft:0,0 bottomRight:4,4" == t.popOutput());
+            REQUIRE("label:2 size:3 topLeft:3,0 bottomRight:4,1" == t.popOutput());
+        }
+
+
 
     }
 }
