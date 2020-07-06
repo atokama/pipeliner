@@ -3,8 +3,6 @@ project(Pipeliner)
 
 set(CMAKE_CXX_STANDARD 17)
 
-option(PILI_DEBUG_ENABLED "Enable debug (this will increase processing time)" ON)
-
 find_package(Threads)
 
 set(PIPELINER_INCLUDE_FILES
@@ -24,14 +22,20 @@ set(PIPELINER_SOURCE_FILES
 source_group("Include Files" FILES ${PIPELINER_INCLUDE_FILES})
 source_group("Source Files" FILES ${PIPELINER_SOURCE_FILES})
 
-add_library(pipeliner ${PIPELINER_INCLUDE_FILES} ${PIPELINER_SOURCE_FILES})
-target_include_directories(pipeliner PUBLIC include)
-target_include_directories(pipeliner SYSTEM PUBLIC dependencies)
-target_link_libraries(pipeliner ${CMAKE_THREAD_LIBS_INIT})
-if (PILI_DEBUG_ENABLED)
-    target_compile_definitions(pipeliner PUBLIC PILI_DEBUG_ENABLED)
-endif ()
+# Create two versions of Pipeliner library - with and without debug.
+# Note, that it's not about Release/Debug, but about debug logging (see Debug.h usage)
+function(AddPipelinerLib Name DebugEnabled)
+    add_library(${Name} ${PIPELINER_INCLUDE_FILES} ${PIPELINER_SOURCE_FILES})
+    target_include_directories(${Name} PUBLIC include)
+    target_include_directories(${Name} SYSTEM PUBLIC dependencies)
+    target_link_libraries(${Name} ${CMAKE_THREAD_LIBS_INIT})
+    if (${DebugEnabled})
+        target_compile_definitions(${Name} PUBLIC PILI_DEBUG_ENABLED)
+    endif ()
+endfunction()
 
+AddPipelinerLib(pipeliner OFF)
+AddPipelinerLib(pipeliner_dbg ON)
 
 # Tests
 set(PIPELINER_TESTER_FILES
@@ -47,7 +51,7 @@ set(PIPELINER_TESTER_FILES
 source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
 
 add_executable(pipeliner_tester ${PIPELINER_TESTER_FILES})
-target_link_libraries(pipeliner_tester pipeliner)
+target_link_libraries(pipeliner_tester pipeliner_dbg)
 
 file(COPY test/data DESTINATION .)
 
