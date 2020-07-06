@@ -132,6 +132,8 @@ namespace pipeliner {
                             merge.push_back(Merge{label, n});
                         }
                     }
+
+                    updateNeibhorsLabels(label);
                 }
             }
 
@@ -145,6 +147,23 @@ namespace pipeliner {
         }
 
     private:
+        void updateNeibhorsLabels(Uint16 label) {
+            if (pos_.col != 0) {
+                auto &n1 = curRow_[pos_.col - 1];
+                if (n1 != 0) { n1 = label; }
+
+                auto &n2 = prevRow_[pos_.col - 1];
+                if (n2 != 0) { n2 = label; }
+            }
+            auto &n3 = prevRow_[pos_.col];
+            if (n3 != 0) { n3 = label; }
+
+            if (pos_.col + 1 != width_) {
+                auto &n4 = prevRow_[pos_.col + 1];
+                if (n4 != 0) { n4 = label; }
+            }
+        }
+
         const Size width_;
         std::vector<Uint16> prevRow_, curRow_;
         LabelSet labelSet_;

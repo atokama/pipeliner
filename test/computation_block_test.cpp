@@ -150,5 +150,29 @@ namespace pipeliner {
             REQUIRE("label:1 size:20 topLeft:0,0 bottomRight:4,5" == t.popOutput());
             REQUIRE("label:2 size:3 topLeft:3,0 bottomRight:4,1" == t.popOutput());
         }
+
+        SECTION("chessboard labels") {
+            Tester t{};
+            t.pushInput("x_x_x_x_");
+            t.pushInput("_x_x_x_x");
+            t.pushInput("x_x_x_x_");
+            t.pushInput("_x_x_x_x");
+            t.pushInput("________");
+
+            t.doTest();
+            REQUIRE("label:1 size:16 topLeft:0,0 bottomRight:3,7" == t.popOutput());
+        }
+
+        SECTION("chessboard labels 2") {
+            Tester t{};
+            t.pushInput("x_x_x_x_x_x_x_x_");
+            t.pushInput("_x_x_x_x_x_x_x_x");
+            t.pushInput("x_x_x_x_x_x_x_x_");
+            t.pushInput("_x_x_x_x_x_x_x_x");
+            t.pushInput("________________");
+
+            t.doTest();
+            REQUIRE("label:1 size:32 topLeft:0,0 bottomRight:3,15" == t.popOutput());
+        }
     }
 }
