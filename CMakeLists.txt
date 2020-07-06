@@ -49,11 +49,20 @@ set(PIPELINER_TESTER_FILES
         test/computation_block_test.cpp)
 
 source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
-
 add_executable(pipeliner_tester ${PIPELINER_TESTER_FILES})
 target_link_libraries(pipeliner_tester pipeliner_dbg)
-
 file(COPY test/data DESTINATION .)
+
+# Benchmark
+set(HAYAI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/dependencies/hayai")
+set(PIPELINER_BENCHMARK_FILES
+        benchmark/hayai_main.hpp
+        benchmark/hayai_posix_main.cpp
+        benchmark/benchmark_test.cpp)
+source_group("Benchmark Files" ${PIPELINER_BENCHMARK_FILES})
+add_executable(pipeliner_benchmark ${PIPELINER_BENCHMARK_FILES})
+target_link_libraries(pipeliner_benchmark pipeliner)
+target_include_directories(pipeliner_benchmark SYSTEM PUBLIC ${HAYAI_INCLUDE_DIR})
 
 # Example
 set(PIPELINER_EXAMPLE_FILES example/main.cpp)
