@@ -7,70 +7,71 @@ namespace pipeliner {
     using UniqueLock = std::unique_lock<std::mutex>;
 
     void BasicBlock::start() {
-        thread_ = std::make_unique<std::thread>([this]() {
-            if (prevBlock_) { prevBlock_->start(); }
+        thread_ = std::make_unique<std::thread>([this]() { doWork(); });
+    }
 
-            while (true) {
-                std::unique_ptr<DataChunk> chunk{nullptr};
-                bool shouldStop = false;
-                if (prevBlock_) {
-                    chunk = prevBlock_->waitChunk();
-                    if (!chunk) {
-                        continue;
-                    }
-                    shouldStop = chunk->getType() == DataChunk::End;
-                }
+    void BasicBlock::doWork() {
+        if (prevBlock_) {
+            prevBlock_->start();
+        }
 
-                auto processedChunk = processChunk(std::move(chunk));
+        while (true) {
+            std::unique_ptr<DataChunk> chunk{nullptr};
+            bool endChunk{false};
 
-                {
-                    LockGuard lock{mutex_};
-
-                    shouldStop = shouldStop || shouldStop_;
-                    if (shouldStop) {
-                        chunk_ = std::make_unique<DataChunk>(DataChunk::End);
-                    } else {
-                        chunk_ = std::move(processedChunk);
-                    }
-                }
-
-                cv_.notify_one();
-
-                if (shouldStop) { break; }
-
-                {
-                    UniqueLock lock{mutex_};
-                    cv_.wait(lock, [this] { return chunk_ == nullptr || shouldStop_; });
+            if (prevBlock_) {
+                chunk = prevBlock_->waitChunk();
+                if (chunk && chunk->getType() == DataChunk::End) {
+                    endChunk = true;
+                    shouldStop_ = true;
                 }
             }
-        });
+
+            if (auto c = processChunk(std::move(chunk))) {
+                if (c->getType() == DataChunk::End) {
+                    shouldStop_ = true;
+                }
+                queue_.enqueue(std::move(c));
+            }
+
+            while (reverseQueue_.try_dequeue(chunk)) {
+                auto c = processReverseChunk(std::move(chunk));
+                if (prevBlock_ && c) {
+                    prevBlock_->enqueueReverseChunk(std::move(c));
+                }
+            }
+
+            if (shouldStop_) {
+                if (!endChunk) {
+                    queue_.enqueue(
+                            std::make_unique<DataChunk>(DataChunk::End));
+                }
+                break;
+            }
+        }
     }
 
     std::unique_ptr<DataChunk> BasicBlock::waitChunk() {
         std::unique_ptr<DataChunk> c{nullptr};
-        {
-            UniqueLock lock{mutex_};
-            cv_.wait(lock, [this] { return chunk_ != nullptr; });
-            c = std::move(chunk_);
-            chunk_ = nullptr;
-        }
-
-        cv_.notify_one();
+        queue_.wait_dequeue(c);
         return std::move(c);
     }
 
+    void BasicBlock::enqueueReverseChunk(std::unique_ptr<DataChunk> chunk) {
+        reverseQueue_.enqueue(std::move(chunk));
+    }
+
     void BasicBlock::stop() {
+        if (prevBlock_) {
+            prevBlock_->stop();
+        } else {
+            shouldStop_ = true;
+        }
+
         if (thread_) {
-            {
-                LockGuard lock{mutex_};
-                shouldStop_ = true;
-            }
-            cv_.notify_one();
             LockGuard lock{joinMutex_};
             if (thread_->joinable()) { thread_->join(); }
         }
-
-        if (prevBlock_) { prevBlock_->stop(); }
     }
 
 }

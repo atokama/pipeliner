@@ -4,6 +4,10 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
+#include <atomic>
+
+#include <readerwriterqueue/atomicops.h>
+#include <readerwriterqueue/readerwriterqueue.h>
 
 #include <pipeliner/debug.h>
 
@@ -43,18 +47,27 @@ namespace pipeliner {
 
         void stop();
 
-        virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
-
         Debug &debug() { return debug_; }
 
+    protected:
+        virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
+
+        virtual std::unique_ptr<DataChunk> processReverseChunk(std::unique_ptr<DataChunk> chunk) {
+            return nullptr;
+        }
+
     private:
-        BasicBlock *const prevBlock_;
-        std::unique_ptr<DataChunk> chunk_;
-        bool shouldStop_{false};
+        void enqueueReverseChunk(std::unique_ptr<DataChunk> chunk);
+
+        void doWork();
+
+        BasicBlock *const prevBlock_{nullptr};
+        std::atomic_bool shouldStop_{false};
         std::unique_ptr<std::thread> thread_;
-        std::condition_variable cv_;
-        mutable std::mutex mutex_, joinMutex_;
+        mutable std::mutex joinMutex_;
         Debug debug_;
+        moodycamel::BlockingReaderWriterQueue<
+                std::unique_ptr<DataChunk>> queue_, reverseQueue_;
     };
 
 }
