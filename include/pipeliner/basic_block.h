@@ -52,13 +52,11 @@ namespace pipeliner {
     protected:
         virtual std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) = 0;
 
-        virtual std::unique_ptr<DataChunk> processReverseChunk(std::unique_ptr<DataChunk> chunk) {
-            return nullptr;
-        }
+        virtual void processReverseChunk(std::unique_ptr<DataChunk> chunk) {}
 
-    private:
         void enqueueReverseChunk(std::unique_ptr<DataChunk> chunk);
 
+    private:
         void doWork();
 
         BasicBlock *const prevBlock_{nullptr};

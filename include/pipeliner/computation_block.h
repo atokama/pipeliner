@@ -27,7 +27,10 @@ namespace pipeliner {
 
     class ComputationBlock : public BasicBlock {
     public:
-        ComputationBlock(BasicBlock *prev) : BasicBlock{prev} {}
+        ComputationBlock(BasicBlock *prev)
+                : BasicBlock{prev},
+                  labelReuseChunk_{std::make_unique<LabelReuseChunk>()} {
+        }
 
         std::unique_ptr<DataChunk>
         processChunk(std::unique_ptr<DataChunk> chunk) override {
@@ -38,14 +41,14 @@ namespace pipeliner {
                 auto pos2 = labelledChunk->pos;
                 pos2.col += 1;
 
-                processFinishedLabels(pos1, *labelledChunk->labelSet, computedChunk->labelData);
-                processFinishedLabels(pos2, *labelledChunk->labelSet, computedChunk->labelData);
+                processFinishedLabels(pos1, computedChunk->labelData);
+                processFinishedLabels(pos2, computedChunk->labelData);
 
                 processLabel(labelledChunk->labels[0], pos1);
                 processLabel(labelledChunk->labels[1], pos2);
 
                 for (const auto &merge : labelledChunk->merges) {
-                    processMerge(merge, *labelledChunk->labelSet);
+                    processMerge(merge);
                 }
             }
 
@@ -64,6 +67,11 @@ namespace pipeliner {
                                  << " topLeft:" << ld.rect.topLeft.row << "," << ld.rect.topLeft.col
                                  << " bottomRight:" << ld.rect.bottomRight.row << "," << ld.rect.bottomRight.col);
                 PILI_DEBUG_NEWLINE();
+            }
+
+            if (!labelReuseChunk_->labels.empty()) {
+                enqueueReverseChunk(std::move(labelReuseChunk_));
+                labelReuseChunk_ = std::make_unique<LabelReuseChunk>();
             }
 
             if (computedChunk->labelData.empty() && chunk->getType() != DataChunk::End) {
@@ -96,7 +104,7 @@ namespace pipeliner {
             }
         }
 
-        void processMerge(const Merge &merge, LabelSet &labelSet) {
+        void processMerge(const Merge &merge) {
             // Labelling block issues duplicate merges, so the merge could be already processed
             if (computedLabels_.count(merge.label1) &&
                 computedLabels_.count(merge.label2)) {
@@ -116,19 +124,18 @@ namespace pipeliner {
                                           c1.rect.bottomRight.row : c2.rect.bottomRight.row;
 
                 // Recycle label after merge
-                labelSet.put(c2.label);
+                labelReuseChunk_->labels.push_back(c2.label);
 
                 computedLabels_.erase(merge.label2);
             }
         }
 
-        void processFinishedLabels(const Pos &pos, LabelSet &labelSet,
-                                   std::vector<LabelData> &finishedLabels) {
+        void processFinishedLabels(const Pos &pos, std::vector<LabelData> &finishedLabels) {
             for (auto iter = computedLabels_.begin(); iter != computedLabels_.end();) {
                 auto &c = iter->second;
                 if (pos.row > c.rect.bottomRight.row + 1) {
                     // Recycle finished label
-                    labelSet.put(c.label);
+                    labelReuseChunk_->labels.push_back(c.label);
 
                     finishedLabels.push_back(c);
                     iter = computedLabels_.erase(iter);
@@ -140,6 +147,7 @@ namespace pipeliner {
 
     private:
         std::map<Uint16, LabelData> computedLabels_;
+        std::unique_ptr<LabelReuseChunk> labelReuseChunk_;
     };
 
 }

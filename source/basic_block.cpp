@@ -35,10 +35,7 @@ namespace pipeliner {
             }
 
             while (reverseQueue_.try_dequeue(chunk)) {
-                auto c = processReverseChunk(std::move(chunk));
-                if (prevBlock_ && c) {
-                    prevBlock_->enqueueReverseChunk(std::move(c));
-                }
+                processReverseChunk(std::move(chunk));
             }
 
             if (shouldStop_) {
@@ -58,7 +55,9 @@ namespace pipeliner {
     }
 
     void BasicBlock::enqueueReverseChunk(std::unique_ptr<DataChunk> chunk) {
-        reverseQueue_.enqueue(std::move(chunk));
+        if (prevBlock_) {
+            prevBlock_->reverseQueue_.enqueue(std::move(chunk));
+        }
     }
 
     void BasicBlock::stop() {

@@ -11,26 +11,25 @@
 namespace pipeliner {
 
     using Uint16 = std::uint16_t;
-    using LockGuard = std::lock_guard<std::mutex>;
 
     struct Merge {
         Uint16 label1;
         Uint16 label2;
     };
 
-    // LabelSet is a thread safe class, which contains set of available labels.
-    // It's instance will be forwarded to the next block (ComputationBlock) to release labels.
+    // LabelSet contains set of available labels.
     class LabelSet {
     public:
-        LabelSet(Size size) {
+        LabelSet(Uint16 size) : next_{size + 1} {
             for (Uint16 label{1}; label != size + 1; ++label) {
                 labels_.insert(label);
             }
         }
 
         Uint16 get() {
-            LockGuard lock{mutex_};
-            assert(!labels_.empty() && "LabelSet must not be empty");
+            if (labels_.empty()) {
+                labels_.insert(next_++);
+            }
             auto iter = labels_.begin();
             auto label = *iter;
             labels_.erase(iter);
@@ -38,29 +37,33 @@ namespace pipeliner {
         }
 
         void put(Uint16 label) {
-            LockGuard lock{mutex_};
             auto p = labels_.insert(label);
         }
 
     private:
-        std::mutex mutex_;
         std::set<Uint16> labels_;
+        Uint16 next_;
     };
 
     class LabelledChunk : public DataChunk {
     public:
-        LabelledChunk(LabelSet *labelSet, DataChunk::Type type = DataChunk::Data)
-                : DataChunk{type}, labelSet{labelSet} {}
+        LabelledChunk(DataChunk::Type type = DataChunk::Data) : DataChunk{type} {}
 
         Pos pos = {};
         Uint16 labels[2] = {0, 0};
         std::vector<Merge> merges;
-        LabelSet *labelSet;
+    };
+
+    class LabelReuseChunk : public DataChunk {
+    public:
+        LabelReuseChunk() : DataChunk{DataChunk::Data} {}
+
+        std::vector<Uint16> labels;
     };
 
     class LabellingBlock : public BasicBlock {
     public:
-        LabellingBlock(Size width, BasicBlock *prev)
+        LabellingBlock(Uint16 width, BasicBlock *prev)
                 : BasicBlock{prev}, width_{width}, labelSet_{width}, pos_{} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
@@ -76,7 +79,7 @@ namespace pipeliner {
                 return nullptr;
             }
 
-            auto labelledChunk = std::make_unique<LabelledChunk>(&labelSet_);
+            auto labelledChunk = std::make_unique<LabelledChunk>();
             labelledChunk->pos = pos_;
 
             labelledChunk->labels[0] = processElement(filteredChunk->filt1, labelledChunk->merges);
@@ -146,6 +149,14 @@ namespace pipeliner {
             return label;
         }
 
+        void processReverseChunk(std::unique_ptr<DataChunk> chunk) override {
+            if (auto c = dynamic_cast<LabelReuseChunk *>(chunk.get())) {
+                for (auto label : c->labels) {
+                    labelSet_.put(label);
+                }
+            }
+        }
+
     private:
         void updateNeibhorsLabels(Uint16 label) {
             if (pos_.col != 0) {
@@ -164,7 +175,7 @@ namespace pipeliner {
             }
         }
 
-        const Size width_;
+        const Uint16 width_;
         std::vector<Uint16> prevRow_, curRow_;
         LabelSet labelSet_;
         Pos pos_;
