@@ -68,6 +68,37 @@ namespace pipeliner {
         std::queue<std::string> data_;
     };
 
+    bool operator==(const Pos &l, const Pos &r) {
+        return l.row == r.row && l.col == r.col;
+    }
+
+    bool operator==(const Rect &l, const Rect &r) {
+        return l.topLeft == r.topLeft && l.bottomRight == r.bottomRight;
+    }
+
+    Rect makeRect(Size topLeftRow, Size topLeftCol, Size bottomRightRow, Size bottomRightCol) {
+        Rect r{};
+        r.topLeft.row = topLeftRow;
+        r.topLeft.col = topLeftCol;
+        r.bottomRight.row = bottomRightRow;
+        r.bottomRight.col = bottomRightCol;
+        return r;
+    }
+
+    LabelData makeLabelData(Uint16 label, Size size, const Rect &rect) {
+        return LabelData{label, size, rect};
+    }
+
+    template<typename T>
+    std::unique_ptr<T> cast(std::unique_ptr<DataChunk> &&chunk) {
+        return std::unique_ptr<T>{static_cast<T *>(chunk.release())};
+    }
+
+    // This tester runs Labelling and Computation blocks.
+    // Labelling block uses input, which is set by user via pushInput().
+    // Output of the computation block is saved into output_ data member.
+    // After running test (via doTest()), output can be tested by checkElement()
+    // and allElementsChecked() methods.
     class Tester {
     public:
         void pushInput(const std::string &str) { input_.push(str); }
@@ -78,16 +109,39 @@ namespace pipeliner {
             last_ = std::make_unique<ComputationBlock>(&b3);
             last_->start();
             while (true) {
-                auto ch = last_->waitChunk();
-                if (ch->getType() == DataChunk::End) { break; }
+                auto c = cast<ComputedChunk>(last_->waitChunk());
+                for (auto &ld : c->labelData) {
+                    output_.push_back(ld);
+                }
+                if (c->getType() == DataChunk::End) {
+                    break;
+                }
             }
             last_->stop();
         }
 
-        std::string popOutput() { return last_->debug().popLine(); }
+        bool checkElement(const LabelData &labelData) {
+            auto iter = std::find_if(
+                    output_.begin(), output_.end(),
+                    [&](const LabelData &ld) {
+                        return (labelData.label == 0 || labelData.label == ld.label) &&
+                               ld.size == labelData.size &&
+                               ld.rect == labelData.rect;
+                    });
+            if (iter == output_.end()) {
+                return false;
+            } else {
+                output_.erase(iter);
+                return true;
+            }
+        }
 
+        bool allElementsChecked() const { return output_.empty(); }
+
+    private:
         std::queue<std::string> input_;
         std::unique_ptr<BasicBlock> last_;
+        std::list<LabelData> output_;
     };
 
     TEST_CASE("ComputationBlock1", "[ComputationBlock]") {
@@ -101,12 +155,15 @@ namespace pipeliner {
             t.pushInput("____");
 
             t.doTest();
-            REQUIRE("label:1 size:1 topLeft:0,0 bottomRight:0,0" == t.popOutput());
-            REQUIRE("label:2 size:1 topLeft:0,2 bottomRight:0,2" == t.popOutput());
-            REQUIRE("label:1 size:1 topLeft:2,2 bottomRight:2,2" == t.popOutput());
-            REQUIRE("label:3 size:1 topLeft:2,0 bottomRight:2,0" == t.popOutput());
-            REQUIRE("label:1 size:1 topLeft:4,2 bottomRight:4,2" == t.popOutput());
-            REQUIRE("label:2 size:1 topLeft:4,0 bottomRight:4,0" == t.popOutput());
+
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(0, 0, 0, 0))));
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(0, 2, 0, 2))));
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(2, 2, 2, 2))));
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(2, 0, 2, 0))));
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(4, 0, 4, 0))));
+            REQUIRE(t.checkElement(makeLabelData(0, 1, makeRect(4, 2, 4, 2))));
+
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("labels on the last line") {
@@ -115,7 +172,11 @@ namespace pipeliner {
             t.pushInput("_xx_");
 
             t.doTest();
-            REQUIRE("label:1 size:2 topLeft:1,1 bottomRight:1,2" == t.popOutput());
+
+            // label:1 size:2 topLeft:1,1 bottomRight:1,2
+            REQUIRE(t.checkElement(makeLabelData(1, 2, makeRect(1, 1, 1, 2))));
+
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("labels merged") {
@@ -125,7 +186,11 @@ namespace pipeliner {
             t.pushInput("xxxx");
 
             t.doTest();
-            REQUIRE("label:1 size:8 topLeft:0,0 bottomRight:2,3" == t.popOutput());
+
+            // label:1 size:8 topLeft:0,0 bottomRight:2,3
+            REQUIRE(t.checkElement(makeLabelData(1, 8, makeRect(0, 0, 2, 3))));
+
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("diagonal labels") {
@@ -135,7 +200,10 @@ namespace pipeliner {
             t.pushInput("x_");
 
             t.doTest();
-            REQUIRE("label:1 size:3 topLeft:0,0 bottomRight:2,1" == t.popOutput());
+
+            // label:1 size:3 topLeft:0,0 bottomRight:2,1
+            REQUIRE(t.checkElement(makeLabelData(1, 3, makeRect(0, 0, 2, 1))));
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("diagonal labels 2") {
@@ -147,8 +215,11 @@ namespace pipeliner {
             t.pushInput("xx__xx");
 
             t.doTest();
-            REQUIRE("label:1 size:20 topLeft:0,0 bottomRight:4,5" == t.popOutput());
-            REQUIRE("label:2 size:3 topLeft:3,0 bottomRight:4,1" == t.popOutput());
+
+            REQUIRE(t.checkElement(makeLabelData(1, 20, makeRect(0, 0, 4, 5))));
+            REQUIRE(t.checkElement(makeLabelData(2, 3, makeRect(3, 0, 4, 1))));
+
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("chessboard labels") {
@@ -160,7 +231,11 @@ namespace pipeliner {
             t.pushInput("________");
 
             t.doTest();
-            REQUIRE("label:1 size:16 topLeft:0,0 bottomRight:3,7" == t.popOutput());
+
+            // label:1 size:16 topLeft:0,0 bottomRight:3,7
+            REQUIRE(t.checkElement(makeLabelData(1, 16, makeRect(0, 0, 3, 7))));
+
+            REQUIRE(t.allElementsChecked());
         }
 
         SECTION("chessboard labels 2") {
@@ -172,7 +247,10 @@ namespace pipeliner {
             t.pushInput("________________");
 
             t.doTest();
-            REQUIRE("label:1 size:32 topLeft:0,0 bottomRight:3,15" == t.popOutput());
+
+            REQUIRE(t.checkElement(makeLabelData(1, 32, makeRect(0, 0, 3, 15))));
+
+            REQUIRE(t.allElementsChecked());
         }
     }
 }
