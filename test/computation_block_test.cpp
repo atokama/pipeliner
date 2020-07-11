@@ -105,7 +105,9 @@ namespace pipeliner {
 
         void doTest() {
             FilterBlockMock b2{input_};
-            LabellingBlock b3{input_.front().size(), &b2};
+            LabellingBlock b3{
+                static_cast<Uint16>(input_.front().size()),
+                &b2};
             last_ = std::make_unique<ComputationBlock>(&b3);
             last_->start();
             while (true) {

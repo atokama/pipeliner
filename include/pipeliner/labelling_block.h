@@ -20,7 +20,8 @@ namespace pipeliner {
     // LabelSet contains set of available labels.
     class LabelSet {
     public:
-        LabelSet(Uint16 size) : next_{size + 1} {
+        LabelSet(Uint16 size) : next_{size} {
+            ++next_;
             for (Uint16 label{1}; label != size + 1; ++label) {
                 labels_.insert(label);
             }

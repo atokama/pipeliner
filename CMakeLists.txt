@@ -32,6 +32,11 @@ function(AddPipelinerLib Name DebugEnabled)
     if (${DebugEnabled})
         target_compile_definitions(${Name} PUBLIC PILI_DEBUG_ENABLED)
     endif ()
+	if(MSVC)
+		# Set __cplusplus macro correctly in Visual Studio
+		# https://peter.bloomfield.online/report-__cplusplus-correctly-with-cmake-and-visual-studio/
+		target_compile_options(${Name} PUBLIC "/Zc:__cplusplus")
+	endif()
 endfunction()
 
 AddPipelinerLib(pipeliner OFF)
