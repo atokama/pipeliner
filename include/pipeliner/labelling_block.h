@@ -103,35 +103,31 @@ namespace pipeliner {
 
         Uint16 processElement(bool elem, std::vector<Merge> &merge) {
             Uint16 label{};
-            std::vector<Uint16> neibhors;
+            Uint16 neibhors[] = {0, 0, 0, 0};
 
             if (elem) {
                 // Here we consider west, north-west, north and north-east neibhors
                 if (pos_.col != 0) {
-                    const auto n1 = curRow_[pos_.col - 1];
-                    if (n1 != 0) { neibhors.push_back(n1); }
-
-                    const auto n2 = prevRow_[pos_.col - 1];
-                    if (n2 != 0) { neibhors.push_back(n2); }
+                    neibhors[0] = curRow_[pos_.col - 1];
+                    neibhors[1] = prevRow_[pos_.col - 1];
                 }
-                const auto n3 = prevRow_[pos_.col];
-                if (n3 != 0) { neibhors.push_back(n3); }
+                neibhors[2] = prevRow_[pos_.col];
 
                 if (pos_.col + 1 != width_) {
-                    const auto n4 = prevRow_[pos_.col + 1];
-                    if (n4 != 0) { neibhors.push_back(n4); }
+                    neibhors[3] = prevRow_[pos_.col + 1];
                 }
 
-                if (neibhors.empty()) {
+                const Uint16 minimum = findMinimumNonZero(neibhors);
+                if (minimum == 0) {
                     // Element has no neibhors, assign new label
                     label = labelSet_.get();
                 } else {
                     // Assign minimal label and merge with neibhors (there might be duplicate merges,
                     // which will be ignored by the ComputationBlock
-                    std::sort(neibhors.begin(), neibhors.end());
-                    label = neibhors[0];
-                    for (auto n : neibhors) {
-                        if (label != n) {
+                    label = minimum;
+                    for (auto i{0}; i != 4; ++i) {
+                        const auto n = neibhors[i];
+                        if (n && label != n) {
                             merge.push_back(Merge{label, n});
                         }
                     }
@@ -173,6 +169,17 @@ namespace pipeliner {
                 auto &n4 = prevRow_[pos_.col + 1];
                 if (n4 != 0) { n4 = label; }
             }
+        }
+
+        Uint16 findMinimumNonZero(Uint16 *labels) {
+            const auto max{std::numeric_limits<Uint16>::max()};
+            auto min{max};
+            for (auto i{0}; i != 4; ++i) {
+                const auto l = labels[i];
+                if (l == 0) { continue; }
+                else if (l < min) { min = l; }
+            }
+            return min == max ? 0 : min;
         }
 
         const Uint16 width_;
