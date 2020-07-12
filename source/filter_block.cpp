@@ -52,7 +52,9 @@ namespace pipeliner {
 
         auto filteredChunk = process(std::move(chunk));
 
-        queue_.enqueue(std::move(filteredChunk));
+        if (filteredChunk.getType() == DataChunk::Data) {
+            queue_.enqueue(std::move(filteredChunk));
+        }
         return true;
     }
 
