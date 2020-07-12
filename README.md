@@ -27,37 +27,6 @@ b2.stop();
 
 ```
 
-If you need to define your own block, then make a class, derived from
-BasicBlock.  If you need to add some fields to a data chunk, derive from
-DataChunk class (see example dir):
-
-```cpp 
-class MyDataChunk : public DataChunk {
-public:
-    MyDataChunk(DataChunk::Type type) : DataChunk{type} {}
-
-    double myDoubleValue;
-    std::vector<int> myVec;
-};
-
-class MyBlock : public BasicBlock {
-public:
-    MyBlock(BasicBlock *previousBlock) : BasicBlock{previousBlock} {}
-
-    std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) override {
-        if (chunk->getType() == DataChunk::End) {
-            return nullptr;
-        }
-
-        auto processedChunk = std::make_unique<MyDataChunk>(DataChunk::Data);
-        processedChunk->myDoubleValue = chunk->data1 * chunk->data2;
-        return std::move(processedChunk);
-    }
-};
-
-```
-
-
 ## Update 
 
 Architecture remain unchanged, but one error was fixed:

@@ -68,9 +68,3 @@ source_group("Benchmark Files" ${PIPELINER_BENCHMARK_FILES})
 add_executable(pipeliner_benchmark ${PIPELINER_BENCHMARK_FILES})
 target_link_libraries(pipeliner_benchmark pipeliner)
 target_include_directories(pipeliner_benchmark SYSTEM PUBLIC ${HAYAI_INCLUDE_DIR})
-
-# Example
-set(PIPELINER_EXAMPLE_FILES example/main.cpp)
-source_group("Example Files" FILES ${PIPELINER_EXAMPLE_FILES})
-add_executable(pipeliner_example ${PIPELINER_EXAMPLE_FILES})
-target_link_libraries(pipeliner_example pipeliner)
