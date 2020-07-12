@@ -118,6 +118,35 @@ usage of `std::vector` in the `LabellingBlock::processElement()`, which was
 used to store neibhor labels. This vector replaced with the automatic (on the
 stack) array. See commit `#2e8556b Optimize std::vector in the LabellingBlock`.  
 
-Next best candidate for the optimisation are DataChunk's malloc/free
-operations. Profiler showes, that those operations take 50% of run time.
-
+Also, profiling showed heavy usage of memory allocations/deallocations (as
+mentioned in the report to the Phase 1). This problem fixed by rejection 
+of using std::unique_ptr for chunks. Now chunks pushed onto the queue directly.
+This required a lot of changes in the code. Queues moved from BasicBlock into 
+derived classes. Now code needs to be refactored. 
+But performance target 300ns almost achieved! Iteration average time: 0.481us:
+```
+tk@tp ~/proj/pipeliner/cmake-build-release (git)-[master] % ./pipeliner_benchmark
+[==========] Running 1 benchmark..
+[ RUN      ] PipelinerBenchmark._ (10 runs, 100000 iterations per run)
+[     DONE ] PipelinerBenchmark._ (480.983284 ms)
+[   RUNS   ]        Average time: 48098.328 us (~5396.922 us)
+                    Fastest time: 40612.542 us (-7485.786 us / -15.564 %)
+                    Slowest time: 55509.178 us (+7410.850 us / +15.408 %)
+                     Median time: 48351.056 us (1st quartile: 44692.788 us | 3rd quartile: 52244.256 us)
+                                  
+             Average performance: 20.79074 runs/s
+                Best performance: 24.62294 runs/s (+3.83219 runs/s / +18.43220 %)
+               Worst performance: 18.01504 runs/s (-2.77570 runs/s / -13.35067 %)
+              Median performance: 20.68207 runs/s (1st quartile: 22.37497 | 3rd quartile: 19.14086)
+                                  
+[ITERATIONS]        Average time: 0.481 us (~0.054 us)
+                    Fastest time: 0.406 us (-0.075 us / -15.564 %)
+                    Slowest time: 0.555 us (+0.074 us / +15.408 %)
+                     Median time: 0.484 us (1st quartile: 0.447 us | 3rd quartile: 0.522 us)
+                                  
+             Average performance: 2079074.33224 iterations/s
+                Best performance: 2462293.54469 iterations/s (+383219.21245 iterations/s / +18.43220 %)
+               Worst performance: 1801503.88824 iterations/s (-277570.44400 iterations/s / -13.35067 %)
+              Median performance: 2068207.17699 iterations/s (1st quartile: 2237497.46827 | 3rd quartile: 1914086.01933)
+[==========] Ran 1 benchmark..
+```

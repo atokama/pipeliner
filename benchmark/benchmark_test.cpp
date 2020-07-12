@@ -35,7 +35,7 @@ namespace pipeliner {
     //
     // > The third and fourth parameters specify the number of runs and iterations to perform.
     // > A run is the execution of the code in the brackets performed iterations number of times.
-    BENCHMARK_F(PipelinerBenchmark, _, 10, 1000) {
+    BENCHMARK_F(PipelinerBenchmark, _, 10, 100000) {
         b4_->waitChunk();
     }
 
