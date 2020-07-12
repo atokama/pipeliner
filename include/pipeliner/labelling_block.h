@@ -70,23 +70,32 @@ namespace pipeliner {
             curRow_.resize(width_, 0);
         }
 
-        std::unique_ptr<DataChunk>
-        processChunk(std::unique_ptr<DataChunk> chunk) override {
-            if (chunk->getType() == DataChunk::End) {
-                return std::move(chunk);
+        LabelledChunk waitChunk() {
+            LabelledChunk c{};
+            queue_.wait_dequeue(c);
+            return std::move(c);
+        }
+
+        void enqueueReverseChunk(LabelReuseChunk c) {
+            reverseQueue_.enqueue(std::move(c));
+        }
+
+        bool processChunk(bool shouldStop) override {
+            processReverseChunk();
+
+            auto filteredChunk = dynamic_cast<FilterBlock *>(prevBlock_)->waitChunk();
+            if (shouldStop || filteredChunk.getType() == DataChunk::End) {
+                queue_.enqueue(LabelledChunk{DataChunk::End});
+                return false;
             }
-            auto filteredChunk = dynamic_cast<FilteredChunk *>(chunk.get());
-            if (!filteredChunk) {
-                return nullptr;
-            }
 
-            auto labelledChunk = std::make_unique<LabelledChunk>();
-            labelledChunk->pos = pos_;
+            LabelledChunk labelledChunk{};
+            labelledChunk.pos = pos_;
 
-            labelledChunk->labels[0] = processElement(filteredChunk->filt1, labelledChunk->merges);
-            labelledChunk->labels[1] = processElement(filteredChunk->filt2, labelledChunk->merges);
+            labelledChunk.labels[0] = processElement(filteredChunk.filt1, labelledChunk.merges);
+            labelledChunk.labels[1] = processElement(filteredChunk.filt2, labelledChunk.merges);
 
-            for (const auto &merge : labelledChunk->merges) {
+            for (const auto &merge : labelledChunk.merges) {
                 PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
             }
 
@@ -99,7 +108,8 @@ namespace pipeliner {
 
             PILI_DEBUG_ADDTEXT("; ");
 
-            return std::move(labelledChunk);
+            queue_.enqueue(std::move(labelledChunk));
+            return true;
         }
 
         Uint16 processElement(bool elem, std::vector<Merge> &merge) {
@@ -146,9 +156,10 @@ namespace pipeliner {
             return label;
         }
 
-        void processReverseChunk(std::unique_ptr<DataChunk> chunk) override {
-            if (auto c = dynamic_cast<LabelReuseChunk *>(chunk.get())) {
-                for (auto label : c->labels) {
+        void processReverseChunk() override {
+            LabelReuseChunk c{};
+            while (reverseQueue_.try_dequeue(c)) {
+                for (auto label : c.labels) {
                     labelSet_.put(label);
                 }
             }
@@ -187,5 +198,7 @@ namespace pipeliner {
         std::vector<Uint16> prevRow_, curRow_;
         LabelSet labelSet_;
         Pos pos_;
+        moodycamel::BlockingReaderWriterQueue<LabelledChunk> queue_;
+        moodycamel::BlockingReaderWriterQueue<LabelReuseChunk> reverseQueue_;
     };
 }

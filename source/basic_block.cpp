@@ -16,49 +16,53 @@ namespace pipeliner {
         }
 
         while (true) {
-            std::unique_ptr<DataChunk> chunk{nullptr};
-            bool endChunk{false};
+//            std::unique_ptr<DataChunk> chunk{nullptr};
+//            bool endChunk{false};
+//
+//            if (prevBlock_) {
+//                chunk = prevBlock_->waitChunk();
+//                if (chunk && chunk->getType() == DataChunk::End) {
+//                    endChunk = true;
+//                    shouldStop_ = true;
+//                }
+//            }
+//
+//            if (auto c = processChunk(std::move(chunk))) {
+//                if (c->getType() == DataChunk::End) {
+//                    shouldStop_ = true;
+//                }
+//                queue_.enqueue(std::move(c));
+//            }
+//
+//            while (reverseQueue_.try_dequeue(chunk)) {
+//                processReverseChunk(std::move(chunk));
+//            }
+//
+            processReverseChunk();
 
-            if (prevBlock_) {
-                chunk = prevBlock_->waitChunk();
-                if (chunk && chunk->getType() == DataChunk::End) {
-                    endChunk = true;
-                    shouldStop_ = true;
-                }
-            }
-
-            if (auto c = processChunk(std::move(chunk))) {
-                if (c->getType() == DataChunk::End) {
-                    shouldStop_ = true;
-                }
-                queue_.enqueue(std::move(c));
-            }
-
-            while (reverseQueue_.try_dequeue(chunk)) {
-                processReverseChunk(std::move(chunk));
-            }
-
-            if (shouldStop_) {
-                if (!endChunk) {
-                    queue_.enqueue(
-                            std::make_unique<DataChunk>(DataChunk::End));
-                }
+            const bool stop{shouldStop_};
+            const bool shouldContinue = processChunk(stop);
+            if (!shouldContinue) {
+//                if (!endChunk) {
+//                    queue_.enqueue(
+//                            std::make_unique<DataChunk>(DataChunk::End));
+//                }
                 break;
             }
         }
     }
 
-    std::unique_ptr<DataChunk> BasicBlock::waitChunk() {
-        std::unique_ptr<DataChunk> c{nullptr};
-        queue_.wait_dequeue(c);
-        return std::move(c);
-    }
+//    std::unique_ptr<DataChunk> BasicBlock::waitChunk() {
+//        std::unique_ptr<DataChunk> c{nullptr};
+//        queue_.wait_dequeue(c);
+//        return std::move(c);
+//    }
 
-    void BasicBlock::enqueueReverseChunk(std::unique_ptr<DataChunk> chunk) {
-        if (prevBlock_) {
-            prevBlock_->reverseQueue_.enqueue(std::move(chunk));
-        }
-    }
+//    void BasicBlock::enqueueReverseChunk(std::unique_ptr<DataChunk> chunk) {
+//        if (prevBlock_) {
+//            prevBlock_->reverseQueue_.enqueue(std::move(chunk));
+//        }
+//    }
 
     void BasicBlock::stop() {
         if (prevBlock_) {

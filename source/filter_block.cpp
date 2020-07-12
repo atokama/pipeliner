@@ -1,5 +1,6 @@
 #include <pipeliner/filter_block.h>
 #include <pipeliner/debug.h>
+#include <pipeliner/generator_block.h>
 
 namespace pipeliner {
 
@@ -8,29 +9,23 @@ namespace pipeliner {
              0.24130249, 0.343757629, 0.24130249,
              0.078025818, 0.008666992, 0.000125885};
 
-    std::unique_ptr<DataChunk> FilterBlock::processChunk(std::unique_ptr<DataChunk> chunk) {
-        if (chunk->getType() == DataChunk::End) {
-            return std::move(chunk);
-        }
+    FilteredChunk FilterBlock::process(const DataChunk &chunk) {
+        FilteredChunk filteredChunk{};
 
-        std::unique_ptr<FilteredChunk> filteredChunk{nullptr};
-
-        buf_.push_back(chunk->data1);
-        buf_.push_back(chunk->data2);
+        buf_.push_back(chunk.data1);
+        buf_.push_back(chunk.data2);
         if (buf_.size() == 10) {
             double value1 = computeValue(buf_.cbegin());
             double value2 = computeValue(++buf_.cbegin());
             buf_.pop_front();
             buf_.pop_front();
 
-            filteredChunk = std::make_unique<FilteredChunk>();
+            filteredChunk.data1 = chunk.data1;
+            filteredChunk.data2 = chunk.data2;
+            filteredChunk.filt1 = value1 >= thresholdValue_;
+            filteredChunk.filt2 = value2 >= thresholdValue_;
 
-            filteredChunk->data1 = chunk->data1;
-            filteredChunk->data2 = chunk->data2;
-            filteredChunk->filt1 = value1 >= thresholdValue_;
-            filteredChunk->filt2 = value2 >= thresholdValue_;
-
-            PILI_DEBUG_ADDTEXT((filteredChunk->filt1 ? 'x' : '_') << (filteredChunk->filt2 ? 'x' : '_'));
+            PILI_DEBUG_ADDTEXT((filteredChunk.filt1 ? 'x' : '_') << (filteredChunk.filt2 ? 'x' : '_'));
         }
 
         pos_.col += 2;
@@ -43,6 +38,20 @@ namespace pipeliner {
         }
 
         return filteredChunk;
+    }
+
+    bool FilterBlock::processChunk(bool shouldStop) {
+        auto chunk = dynamic_cast<GeneratorBlock *>(prevBlock_)->waitChunk();
+
+        if (shouldStop || chunk.getType() == DataChunk::End) {
+            queue_.enqueue(FilteredChunk{DataChunk::End});
+            return false;
+        }
+
+        auto filteredChunk = process(std::move(chunk));
+
+        queue_.enqueue(std::move(filteredChunk));
+        return true;
     }
 
     double FilterBlock::computeValue(std::list<Uint8>::const_iterator bufIter) {

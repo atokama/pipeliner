@@ -28,7 +28,18 @@ namespace pipeliner {
                 : BasicBlock{prev}, thresholdValue_{thresholdValue},
                   pos_{0, 0}, width_{width} {}
 
-        std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk> chunk) override;
+        virtual FilteredChunk waitChunk() {
+            FilteredChunk c{};
+            queue_.wait_dequeue(c);
+            return std::move(c);
+        }
+
+        bool processChunk(bool shouldStop) override;
+
+        FilteredChunk process(const DataChunk &chunk);
+
+    protected:
+        moodycamel::BlockingReaderWriterQueue<FilteredChunk> queue_;
 
     private:
         double computeValue(std::list<Uint8>::const_iterator bufIter);

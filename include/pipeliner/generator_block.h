@@ -13,12 +13,24 @@ namespace pipeliner {
 
     using namespace std::chrono_literals;
 
-    class CsvReaderBlock : public BasicBlock {
+    class GeneratorBlock : public BasicBlock {
+    public:
+        DataChunk waitChunk() {
+            DataChunk c{};
+            queue_.wait_dequeue(c);
+            return std::move(c);
+        }
+
+    protected:
+        moodycamel::BlockingReaderWriterQueue<DataChunk> queue_;
+    };
+
+    class CsvReaderBlock : public GeneratorBlock {
     public:
         CsvReaderBlock(const std::filesystem::path &csvFile,
                        std::chrono::duration<double> delay = 500ns);
 
-        std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override;
+        bool processChunk(bool shouldStop) override;
 
     private:
         const std::chrono::duration<double, std::nano> delay_;
@@ -27,11 +39,13 @@ namespace pipeliner {
         std::size_t iter_;
     };
 
-    class RandomNumberGeneratorBlock : public BasicBlock {
+    class RandomNumberGeneratorBlock : public GeneratorBlock {
     public:
         RandomNumberGeneratorBlock(std::chrono::duration<double> delay = 500ns);
 
-        std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override;
+        bool processChunk(bool shouldStop) override;
+
+        DataChunk process();
 
     private:
         const std::chrono::duration<double, std::nano> delay_;

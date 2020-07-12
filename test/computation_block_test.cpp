@@ -41,20 +41,26 @@ namespace pipeliner {
         } while (l4.size() != 0);
     }
 
-    class FilterBlockMock : public BasicBlock {
+    class FilterBlockMock : public FilterBlock {
     public:
-        FilterBlockMock(const std::queue<std::string> &data) : BasicBlock{nullptr}, data_{data} {}
+        FilterBlockMock(const std::queue<std::string> &data)
+                : FilterBlock{0, 0, nullptr},
+                  data_{data} {}
 
-        std::unique_ptr<DataChunk> processChunk(std::unique_ptr<DataChunk>) override {
-            if (data_.empty()) { return std::make_unique<DataChunk>(DataChunk::End); }
+        bool processChunk(bool shouldStop) override {
+            if (shouldStop || data_.empty()) {
+                queue_.enqueue(FilteredChunk{DataChunk::End});
+                return false;
+            }
 
-            auto ch = std::make_unique<FilteredChunk>();
-            ch->filt1 = setFilt(data_.front());
-            ch->filt2 = setFilt(data_.front());
+            FilteredChunk ch{};
+            ch.filt1 = setFilt(data_.front());
+            ch.filt2 = setFilt(data_.front());
 
             if (data_.front().empty()) { data_.pop(); }
 
-            return std::move(ch);
+            queue_.enqueue(std::move(ch));
+            return true;
         }
 
     private:
@@ -106,16 +112,16 @@ namespace pipeliner {
         void doTest() {
             FilterBlockMock b2{input_};
             LabellingBlock b3{
-                static_cast<Uint16>(input_.front().size()),
-                &b2};
+                    static_cast<Uint16>(input_.front().size()),
+                    &b2};
             last_ = std::make_unique<ComputationBlock>(&b3);
             last_->start();
             while (true) {
-                auto c = cast<ComputedChunk>(last_->waitChunk());
-                for (auto &ld : c->labelData) {
+                auto c = last_->waitChunk();
+                for (auto &ld : c.labelData) {
                     output_.push_back(ld);
                 }
-                if (c->getType() == DataChunk::End) {
+                if (c.getType() == DataChunk::End) {
                     break;
                 }
             }
@@ -142,7 +148,7 @@ namespace pipeliner {
 
     private:
         std::queue<std::string> input_;
-        std::unique_ptr<BasicBlock> last_;
+        std::unique_ptr<ComputationBlock> last_;
         std::list<LabelData> output_;
     };
 

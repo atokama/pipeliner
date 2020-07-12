@@ -17,27 +17,34 @@ namespace pipeliner {
                         218, 242, 204, 3, 77, 32, 18, 42, 202, 161, 112, 226, 206, 51, 6, 43};
 
                 CsvReaderBlock block{csvFile};
+                block.start();
 
                 std::vector<Uint8> actual{};
                 while (expected.size() != actual.size()) {
-                    auto chunk = block.processChunk(nullptr);
-                    actual.push_back(chunk->data1);
-                    actual.push_back(chunk->data2);
+                    auto chunk = block.waitChunk();
+                    actual.push_back(chunk.data1);
+                    actual.push_back(chunk.data2);
                 }
+
+                block.stop();
 
                 REQUIRE(expected == actual);
             }
 
             SECTION("Read file until the end") {
                 CsvReaderBlock block{csvFile};
+                block.start();
                 int elementsCount{0};
                 while (true) {
-                    auto chunk = block.processChunk(nullptr);
-                    if (chunk->getType() == DataChunk::End) {
+                    auto chunk = block.waitChunk();
+                    if (chunk.getType() == DataChunk::End) {
                         break;
                     }
                     elementsCount += 2;
                 }
+
+                block.stop();
+
                 // 16 columns, 100 rows
                 REQUIRE(16 * 100 == elementsCount);
             }
@@ -46,8 +53,8 @@ namespace pipeliner {
 
     TEST_CASE("RandomNumberGeneratorBlock", "[GeneratorBlock]") {
         RandomNumberGeneratorBlock block{};
-        auto chunk = block.processChunk(nullptr);
-        REQUIRE(DataChunk::Data == chunk->getType());
+        auto chunk = block.process();
+        REQUIRE(DataChunk::Data == chunk.getType());
     }
 
 }
