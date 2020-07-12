@@ -82,13 +82,8 @@ namespace pipeliner {
                 dynamic_cast<LabellingBlock *>(prevBlock_)->enqueueReverseChunk(std::move(temp));
             }
 
-            if (computedChunk.labelData.empty() && computedChunk.getType() != DataChunk::End) {
-//                 Nothing to output: no finished labels, not the last chunk
-                return true;
-            } else {
-                queue_.enqueue(std::move(computedChunk));
-                return !shouldStop;
-            }
+            queue_.enqueue(std::move(computedChunk));
+            return !shouldStop;
         }
 
         void processLabel(Uint16 label, const Pos &pos) {
