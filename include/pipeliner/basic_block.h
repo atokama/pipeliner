@@ -43,8 +43,6 @@ namespace pipeliner {
 
         void start();
 
-//        std::unique_ptr<DataChunk> waitChunk();
-
         void stop();
 
         Debug &debug() { return debug_; }
@@ -54,8 +52,6 @@ namespace pipeliner {
 
         virtual void processReverseChunk() {}
 
-//        void enqueueReverseChunk(std::unique_ptr<DataChunk> chunk);
-
         BasicBlock *const prevBlock_{nullptr};
     private:
         void doWork();
@@ -64,8 +60,6 @@ namespace pipeliner {
         std::unique_ptr<std::thread> thread_;
         mutable std::mutex joinMutex_;
         Debug debug_;
-//        moodycamel::BlockingReaderWriterQueue<
-//                std::unique_ptr<DataChunk>> queue_, reverseQueue_;
     };
 
 }
