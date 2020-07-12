@@ -18,7 +18,7 @@ namespace pipeliner {
     class DataChunk {
     public:
         enum Type {
-            Data, End,
+            Data, Empty, End,
         };
 
         virtual ~DataChunk() = default;

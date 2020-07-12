@@ -21,12 +21,14 @@ namespace pipeliner {
             chunk.data2 = input.front();
             input.pop_front();
             auto fc = filterBlock.process(std::move(chunk));
-            output.push_back(fc.filt1);
-            output.push_back(fc.filt2);
+            if (fc.getType() == DataChunk::Data) {
+                output.push_back(fc.filt1);
+                output.push_back(fc.filt2);
+            }
         }
 
         std::vector<bool> expected{false, false, false, false, true, true, true, true};
-//        REQUIRE(expected == output);
+        REQUIRE(expected == output);
     }
 
 }

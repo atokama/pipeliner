@@ -10,11 +10,13 @@ namespace pipeliner {
              0.078025818, 0.008666992, 0.000125885};
 
     FilteredChunk FilterBlock::process(const DataChunk &chunk) {
-        FilteredChunk filteredChunk{};
+        FilteredChunk filteredChunk{DataChunk::Empty};
 
         buf_.push_back(chunk.data1);
         buf_.push_back(chunk.data2);
         if (buf_.size() == 10) {
+            filteredChunk.setType(DataChunk::Data);
+
             double value1 = computeValue(buf_.cbegin());
             double value2 = computeValue(++buf_.cbegin());
             buf_.pop_front();
