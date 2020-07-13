@@ -9,14 +9,14 @@ namespace pipeliner {
     public:
         void SetUp() override {
             const auto generatorBlockDelay = 0ms;
-            const int threshold = 128;
+            const double threshold = 128;
 
-            const int width = 10;
-            const int rowCount = 10;
+            const Size width = 10;
+            const Size rowCount = 10;
 
-            b1_ = std::make_unique<RandomNumberGeneratorBlock>(generatorBlockDelay);
-            b2_ = std::make_unique<FilterBlock>(threshold, width + 8, b1_.get());
-            b3_ = std::make_unique<LabellingBlock>(width, b2_.get());
+            b1_ = std::make_unique<GeneratorBlock>(generatorBlockDelay);
+            b2_ = std::make_unique<FilterBlock>(b1_.get(), threshold, width + 8);
+            b3_ = std::make_unique<LabellingBlock>(b2_.get(), static_cast<Uint16>(width));
             b4_ = std::make_unique<ComputationBlock>(b3_.get());
             b4_->start();
         }
@@ -25,7 +25,7 @@ namespace pipeliner {
             b4_->stop();
         }
 
-        std::unique_ptr<RandomNumberGeneratorBlock> b1_;
+        std::unique_ptr<GeneratorBlock> b1_;
         std::unique_ptr<FilterBlock> b2_;
         std::unique_ptr<LabellingBlock> b3_;
         std::unique_ptr<ComputationBlock> b4_;
@@ -36,7 +36,8 @@ namespace pipeliner {
     // > The third and fourth parameters specify the number of runs and iterations to perform.
     // > A run is the execution of the code in the brackets performed iterations number of times.
     BENCHMARK_F(PipelinerBenchmark, _, 10, 100000) {
-        b4_->waitChunk();
+        ComputedChunk c{};
+        b4_->getProcessor().getQueue().wait_dequeue(c);
     }
 
 }

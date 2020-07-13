@@ -6,7 +6,7 @@ namespace pipeliner {
 
     TEST_CASE("CsvReaderBlock", "[GeneratorBlock]") {
         SECTION("Reading 16 columns, 100 rows csv file") {
-            const auto csvFile = std::filesystem::path{} / "data" / "MOCK_DATA_16_100.csv";
+            const auto csvFile = Path{} / "data" / "MOCK_DATA_16_100.csv";
 
             SECTION("Check first 5 rows of csv file") {
                 std::vector<Uint8> expected{
@@ -16,34 +16,33 @@ namespace pipeliner {
                         145, 35, 131, 221, 164, 134, 140, 249, 149, 75, 252, 59, 69, 7, 99, 179,
                         218, 242, 204, 3, 77, 32, 18, 42, 202, 161, 112, 226, 206, 51, 6, 43};
 
-                CsvReaderBlock block{csvFile};
-                block.start();
+                GeneratorProcessor p{csvFile};
 
                 std::vector<Uint8> actual{};
                 while (expected.size() != actual.size()) {
-                    auto chunk = block.waitChunk();
-                    actual.push_back(chunk.data1);
-                    actual.push_back(chunk.data2);
+                    const auto c = p.processChunk({});
+                    actual.push_back(c.data1);
+                    actual.push_back(c.data2);
                 }
-
-                block.stop();
 
                 REQUIRE(expected == actual);
             }
 
             SECTION("Read file until the end") {
-                CsvReaderBlock block{csvFile};
-                block.start();
+                GeneratorBlock b{csvFile};
+                b.start();
+
                 int elementsCount{0};
                 while (true) {
-                    auto chunk = block.waitChunk();
-                    if (chunk.getType() == DataChunk::End) {
+                    DataChunk c{};
+                    b.getProcessor().getQueue().wait_dequeue(c);
+                    if (c.getType() == DataChunk::End) {
                         break;
                     }
                     elementsCount += 2;
                 }
 
-                block.stop();
+                b.stop();
 
                 // 16 columns, 100 rows
                 REQUIRE(16 * 100 == elementsCount);
@@ -52,9 +51,9 @@ namespace pipeliner {
     }
 
     TEST_CASE("RandomNumberGeneratorBlock", "[GeneratorBlock]") {
-        RandomNumberGeneratorBlock block{};
-        auto chunk = block.process();
-        REQUIRE(DataChunk::Data == chunk.getType());
+        GeneratorProcessor p{};
+        const auto c = p.processChunk({});
+        REQUIRE(DataChunk::Data == c.getType());
     }
 
 }

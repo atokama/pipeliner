@@ -24,51 +24,39 @@ namespace pipeliner {
         std::vector<LabelData> labelData;
     };
 
+    struct ComputationContext {
+        std::map<Uint16, LabelData> computedLabels_;
+        std::vector<Uint16> releasedLabels_;
+    };
 
-    class ComputationBlock : public BasicBlock {
-    public:
-        ComputationBlock(BasicBlock *prev)
-                : BasicBlock{prev},
-                  labelReuseChunk_{} {
-        }
+    struct ComputationProcessor : GenericProcessor<ComputationProcessor, ComputedChunk, LabelledChunk>,
+                                  private ComputationContext {
+        ComputedChunk processChunkImpl(LabelledChunk c) {
+            ComputedChunk chunk{};
 
-        ComputedChunk waitChunk() {
-            ComputedChunk c{};
-            queue_.wait_dequeue(c);
-            return std::move(c);
-        }
-
-        bool
-        processChunk(bool shouldStop) override {
-            ComputedChunk computedChunk{};
-
-            auto labelledChunk = dynamic_cast<LabellingBlock *>(prevBlock_)->waitChunk();
-
-            auto pos1 = labelledChunk.pos;
-            auto pos2 = labelledChunk.pos;
+            auto pos1 = c.pos;
+            auto pos2 = c.pos;
             pos2.col += 1;
 
-            processFinishedLabels(pos1, computedChunk.labelData);
-            processFinishedLabels(pos2, computedChunk.labelData);
+            processFinishedLabels(pos1, chunk.labelData);
+            processFinishedLabels(pos2, chunk.labelData);
 
-            processLabel(labelledChunk.labels[0], pos1);
-            processLabel(labelledChunk.labels[1], pos2);
+            processLabel(c.labels[0], pos1);
+            processLabel(c.labels[1], pos2);
 
-            for (const auto &merge : labelledChunk.merges) {
+            for (const auto &merge : c.merges) {
                 processMerge(merge);
             }
 
             // Finish all labels on the end
-            if (shouldStop || labelledChunk.getType() == DataChunk::End) {
-                shouldStop = true;
-                computedChunk.setType(DataChunk::End);
+            if (c.getType() == DataChunk::End) {
                 for (auto iter = computedLabels_.begin(); iter != computedLabels_.end();) {
-                    computedChunk.labelData.push_back(iter->second);
+                    chunk.labelData.push_back(iter->second);
                     iter = computedLabels_.erase(iter);
                 }
             }
 
-            for (const auto &ld : computedChunk.labelData) {
+            for (const auto &ld : chunk.labelData) {
                 PILI_DEBUG_ADDTEXT(
                         "label:" << ld.label << " size:" << ld.size
                                  << " topLeft:" << ld.rect.topLeft.row << "," << ld.rect.topLeft.col
@@ -76,14 +64,14 @@ namespace pipeliner {
                 PILI_DEBUG_NEWLINE();
             }
 
-            if (!labelReuseChunk_.labels.empty()) {
-                LabelReuseChunk temp{};
-                std::swap(labelReuseChunk_, temp);
-                dynamic_cast<LabellingBlock *>(prevBlock_)->enqueueReverseChunk(std::move(temp));
+            if (!releasedLabels_.empty()) {
+                LabelledChunk l{};
+                std::swap(l.releasedLabels, releasedLabels_);
+                enqueueReverseChunk(std::move(l));
             }
 
-            queue_.enqueue(std::move(computedChunk));
-            return !shouldStop;
+            if (c.getType() == DataChunk::End) { chunk.setType(DataChunk::End); }
+            return chunk;
         }
 
         void processLabel(Uint16 label, const Pos &pos) {
@@ -128,7 +116,7 @@ namespace pipeliner {
                                           c1.rect.bottomRight.row : c2.rect.bottomRight.row;
 
                 // Recycle label after merge
-                labelReuseChunk_.labels.push_back(c2.label);
+                releasedLabels_.push_back(c2.label);
 
                 computedLabels_.erase(merge.label2);
             }
@@ -139,7 +127,7 @@ namespace pipeliner {
                 auto &c = iter->second;
                 if (pos.row > c.rect.bottomRight.row + 1) {
                     // Recycle finished label
-                    labelReuseChunk_.labels.push_back(c.label);
+                    releasedLabels_.push_back(c.label);
 
                     finishedLabels.push_back(c);
                     iter = computedLabels_.erase(iter);
@@ -148,11 +136,8 @@ namespace pipeliner {
                 }
             }
         }
-
-    private:
-        std::map<Uint16, LabelData> computedLabels_;
-        LabelReuseChunk labelReuseChunk_;
-        moodycamel::BlockingReaderWriterQueue<ComputedChunk> queue_;
     };
+
+    using ComputationBlock = GenericBlock<ComputationProcessor>;
 
 }

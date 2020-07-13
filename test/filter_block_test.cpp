@@ -11,19 +11,21 @@ namespace pipeliner {
         const double thresholdValue = 8;
         const Size width = 16;
 
-        FilterBlock filterBlock{thresholdValue, width, nullptr};
+        FilterProcessor p{thresholdValue, width};
 
         std::vector<bool> output{};
         while (!input.empty()) {
-            DataChunk chunk{};
-            chunk.data1 = input.front();
+            DataChunk c{};
+            c.data1 = input.front();
             input.pop_front();
-            chunk.data2 = input.front();
+            c.data2 = input.front();
             input.pop_front();
-            auto fc = filterBlock.process(std::move(chunk));
-            if (fc.getType() == DataChunk::Data) {
-                output.push_back(fc.filt1);
-                output.push_back(fc.filt2);
+
+            auto f = p.processChunk(std::move(c));
+
+            if (f.getType() == DataChunk::Data) {
+                output.push_back(f.filt1);
+                output.push_back(f.filt2);
             }
         }
 

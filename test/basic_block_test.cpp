@@ -16,56 +16,30 @@ namespace pipeliner {
         Uint8 value;
     };
 
-    class BasicBlockTester : public BasicBlock {
-    public:
-        BasicBlockTester(BasicBlock *prevBlock = nullptr) : BasicBlock{prevBlock} {}
-
-        TesterChunk waitChunk() {
-            TesterChunk c{};
-            queue_.wait_dequeue(c);
+    struct TesterProcessor : GenericProcessor<TesterProcessor, TesterChunk, TesterChunk> {
+        TesterChunk processChunkImpl(TesterChunk c) {
+            if (c.getType() == DataChunk::Empty) {
+                c.setType(DataChunk::Data);
+            }
+            ++c.value;
             return std::move(c);
         }
-
-        bool processChunk(bool shouldStop) override {
-            int v = 0;
-            if (prevBlock_) {
-                auto chunk = dynamic_cast<BasicBlockTester *>(prevBlock_)->waitChunk();
-                if (chunk.getType() == DataChunk::End) {
-                    shouldStop = true;
-                } else {
-                    v = chunk.value + 1;
-                }
-            }
-
-            if (v == 100) {
-                shouldStop = true;
-            }
-
-            TesterChunk processedChunk{};
-            processedChunk.value = v;
-
-            if (shouldStop) {
-                processedChunk.setType(DataChunk::End);
-            }
-
-            queue_.enqueue(std::move(processedChunk));
-
-            return !shouldStop;
-        };
-
-    private:
-        moodycamel::BlockingReaderWriterQueue<TesterChunk> queue_;
     };
+
+    using BasicBlockTester = GenericBlock<TesterProcessor>;
+
 
     TEST_CASE("BasicBlock", "[BasicBlock]") {
         BasicBlockTester g{};
         BasicBlockTester generator{&g};
+
         generator.start();
 
         auto t = ns();
         const auto tFinish = 300000 + t;
         while (ns() < tFinish) {
-            auto chunk = generator.waitChunk();
+            TesterChunk c{};
+            generator.getProcessor().getQueue().wait_dequeue(c);
             std::cout << "iteration time ns: " << ns() - t << std::endl;
             t = ns();
         }

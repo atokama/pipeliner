@@ -6,60 +6,79 @@
 #include <cstdint>
 #include <atomic>
 
-#include <readerwriterqueue/atomicops.h>
-#include <readerwriterqueue/readerwriterqueue.h>
-
-#include <pipeliner/debug.h>
+#include <pipeliner/processor.h>
 
 namespace pipeliner {
 
-    using Uint8 = std::uint8_t;
+    using LockGuard = std::lock_guard<std::mutex>;
+    using UniqueLock = std::unique_lock<std::mutex>;
 
-    class DataChunk {
-    public:
-        enum Type {
-            Data, Empty, End,
-        };
-
-        virtual ~DataChunk() = default;
-
-        DataChunk(DataChunk::Type type = Data) : type_{type}, data1{0}, data2{0} {}
-
-        Type getType() const { return type_; }
-
-        void setType(Type type) { type_ = type; }
-
-        Uint8 data1, data2;
-
-    private:
-        Type type_;
-    };
-
-    class BasicBlock {
-    public:
+    struct BasicBlock {
         virtual ~BasicBlock() = default;
 
-        BasicBlock(BasicBlock *prevBlock = nullptr) : prevBlock_{prevBlock} {}
+        BasicBlock(BasicBlock *prevBlock) : prevBlock_{prevBlock} {}
 
-        void start();
+        void start() {
+            thread_ = std::make_unique<std::thread>([this]() { doWork(); });
+        }
 
-        void stop();
+        void stop() {
+            if (prevBlock_) {
+                prevBlock_->stop();
+            } else {
+                shouldStop_ = true;
+            }
+            if (thread_) {
+                LockGuard lock{joinMutex_};
+                if (thread_->joinable()) { thread_->join(); }
+            }
+        }
 
-        Debug &debug() { return debug_; }
+        virtual void doWork() = 0;
 
-    protected:
-        virtual bool processChunk(bool shouldStop) = 0;
-
-        virtual void processReverseChunk() {}
-
-        BasicBlock *const prevBlock_{nullptr};
-    private:
-        void doWork();
-
+        BasicBlock *prevBlock_{nullptr};
         std::atomic_bool shouldStop_{false};
+
+    private:
         std::unique_ptr<std::thread> thread_;
         mutable std::mutex joinMutex_;
-        Debug debug_;
+    };
+
+    template<typename ProcessorType>
+    struct GenericBlock : BasicBlock {
+        template<typename PrevProcessorType, typename... Args>
+        GenericBlock(GenericBlock<PrevProcessorType> *prevBlock, Args &&... args)
+                : BasicBlock{prevBlock},
+                  proc_{std::forward<Args>(args)...} {
+            if (prevBlock) {
+                auto &q1 = prevBlock->getProcessor().getQueue();
+                auto &q2 = prevBlock->getProcessor().getReverseQueue();
+                proc_.setPrevQueue(q1);
+                proc_.setPrevReverseQueue(q2);
+            }
+        }
+
+        template<typename... Args>
+        GenericBlock(Args &&... args)
+                : BasicBlock{nullptr},
+                  proc_{std::forward<Args>(args)...} {
+        }
+
+        ProcessorType &getProcessor() { return proc_; }
+
+        void doWork() override {
+            if (prevBlock_) { prevBlock_->start(); }
+
+            while (true) {
+                proc_.doReverseIteration();
+                const bool stop{shouldStop_};
+
+                if (!proc_.doProcessIteration(stop)) { break; }
+            }
+        }
+
+    private:
+        ProcessorType proc_;
     };
 
 }

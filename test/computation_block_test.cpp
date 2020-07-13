@@ -10,25 +10,26 @@ namespace pipeliner {
     TEST_CASE("ComputationBlock", "[ComputationBlock]") {
 
         const auto generatorBlockDelay = 0ms;
-        const int threshold = 128;
-        const int width = 32;
+        const double threshold = 128;
+        const Size width = 32;
 
-        RandomNumberGeneratorBlock b1{generatorBlockDelay};
-        FilterBlock b2{threshold, width, &b1};
-        LabellingBlock b3{width - 8, &b2};
+        GeneratorBlock b1{generatorBlockDelay};
+        FilterBlock b2{&b1, threshold, width};
+        LabellingBlock b3{&b2, static_cast<Uint16>(width - 8)};
         ComputationBlock b4{&b3};
 
         b4.start();
 
         for (int i = 0; i != 10; ++i) {
-            b4.waitChunk();
+            ComputedChunk c{};
+            b4.getProcessor().getQueue().wait_dequeue(c);
         }
 
         b4.stop();
 
         std::string l2;
         do {
-            l2 = b2.debug().popLine();
+            l2 = b2.getProcessor().debug().popLine();
             std::cout << l2 << std::endl;
         } while (l2.size() != 0);
 
@@ -36,43 +37,46 @@ namespace pipeliner {
 
         std::string l4;
         do {
-            l4 = b4.debug().popLine();
+            l4 = b4.getProcessor().debug().popLine();
             std::cout << l4 << std::endl;
         } while (l4.size() != 0);
     }
 
-    class FilterBlockMock : public FilterBlock {
-    public:
-        FilterBlockMock(const std::queue<std::string> &data)
-                : FilterBlock{0, 0, nullptr},
-                  data_{data} {}
+    struct FilterMockContext {
+        std::queue<std::string> data_;
+    };
 
-        bool processChunk(bool shouldStop) override {
-            if (shouldStop || data_.empty()) {
-                queue_.enqueue(FilteredChunk{DataChunk::End});
-                return false;
+    struct FilterProcessorMock : GenericProcessor<FilterProcessorMock, FilteredChunk, DataChunk>,
+                                 private FilterMockContext {
+        FilterProcessorMock(const std::queue<std::string> &data)
+                : FilterMockContext{data} {}
+
+        FilteredChunk processChunkImpl(DataChunk c) {
+            FilteredChunk chunk{};
+
+            if (!data_.empty()) {
+                chunk.filt1 = setFilt(data_.front());
+                chunk.filt2 = setFilt(data_.front());
+
+                if (data_.front().empty()) { data_.pop(); }
+
+            } else {
+                chunk.setType(DataChunk::End);
             }
 
-            FilteredChunk ch{};
-            ch.filt1 = setFilt(data_.front());
-            ch.filt2 = setFilt(data_.front());
-
-            if (data_.front().empty()) { data_.pop(); }
-
-            queue_.enqueue(std::move(ch));
-            return true;
+            if (c.getType() == DataChunk::End) { chunk.setType(DataChunk::End); }
+            return chunk;
         }
 
-    private:
         bool setFilt(std::string &str) {
             if (str.empty()) { return false; }
             const bool f = str[0] == 'x';
             str.erase(0, 1); // remove first char
             return f;
         }
-
-        std::queue<std::string> data_;
     };
+
+    using FilterBlockMock = GenericBlock<FilterProcessorMock>;
 
     bool operator==(const Pos &l, const Pos &r) {
         return l.row == r.row && l.col == r.col;
@@ -95,11 +99,6 @@ namespace pipeliner {
         return LabelData{label, size, rect};
     }
 
-    template<typename T>
-    std::unique_ptr<T> cast(std::unique_ptr<DataChunk> &&chunk) {
-        return std::unique_ptr<T>{static_cast<T *>(chunk.release())};
-    }
-
     // This tester runs Labelling and Computation blocks.
     // Labelling block uses input, which is set by user via pushInput().
     // Output of the computation block is saved into output_ data member.
@@ -111,13 +110,12 @@ namespace pipeliner {
 
         void doTest() {
             FilterBlockMock b2{input_};
-            LabellingBlock b3{
-                    static_cast<Uint16>(input_.front().size()),
-                    &b2};
+            LabellingBlock b3{&b2, static_cast<Uint16>(input_.front().size())};
             last_ = std::make_unique<ComputationBlock>(&b3);
             last_->start();
             while (true) {
-                auto c = last_->waitChunk();
+                ComputedChunk c{};
+                last_->getProcessor().getQueue().wait_dequeue(c);
                 for (auto &ld : c.labelData) {
                     output_.push_back(ld);
                 }

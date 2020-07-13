@@ -13,8 +13,8 @@ namespace pipeliner {
     using Uint16 = std::uint16_t;
 
     struct Merge {
-        Uint16 label1;
-        Uint16 label2;
+        Uint16 label1{};
+        Uint16 label2{};
     };
 
     // LabelSet contains set of available labels.
@@ -53,49 +53,45 @@ namespace pipeliner {
         Pos pos = {};
         Uint16 labels[2] = {0, 0};
         std::vector<Merge> merges;
+
+        std::vector<Uint16> releasedLabels;
     };
 
     class LabelReuseChunk : public DataChunk {
     public:
         LabelReuseChunk() : DataChunk{DataChunk::Data} {}
 
-        std::vector<Uint16> labels;
     };
 
-    class LabellingBlock : public BasicBlock {
-    public:
-        LabellingBlock(Uint16 width, BasicBlock *prev)
-                : BasicBlock{prev}, width_{width}, labelSet_{width}, pos_{} {
+    struct LabellingContext {
+        const Uint16 width_;
+        LabelSet labelSet_;
+        Pos pos_;
+        std::vector<Uint16> prevRow_, curRow_;
+    };
+
+    struct LabellingProcessor : GenericProcessor<LabellingProcessor, LabelledChunk, FilteredChunk>,
+                                private LabellingContext {
+        LabellingProcessor(Uint16 width)
+                : LabellingContext{width, LabelSet{width}, {}} {
             prevRow_.resize(width_, 0);
             curRow_.resize(width_, 0);
         }
 
-        LabelledChunk waitChunk() {
-            LabelledChunk c{};
-            queue_.wait_dequeue(c);
-            return std::move(c);
-        }
-
-        void enqueueReverseChunk(LabelReuseChunk c) {
-            reverseQueue_.enqueue(std::move(c));
-        }
-
-        bool processChunk(bool shouldStop) override {
-            processReverseChunk();
-
-            auto filteredChunk = dynamic_cast<FilterBlock *>(prevBlock_)->waitChunk();
-            if (shouldStop || filteredChunk.getType() == DataChunk::End) {
-                queue_.enqueue(LabelledChunk{DataChunk::End});
-                return false;
+        void processReverseChunkImpl(LabelledChunk c) {
+            for (const auto label : c.releasedLabels) {
+                labelSet_.put(label);
             }
+        }
 
-            LabelledChunk labelledChunk{};
-            labelledChunk.pos = pos_;
+        LabelledChunk processChunkImpl(FilteredChunk c) {
+            LabelledChunk chunk{};
+            chunk.pos = pos_;
 
-            labelledChunk.labels[0] = processElement(filteredChunk.filt1, labelledChunk.merges);
-            labelledChunk.labels[1] = processElement(filteredChunk.filt2, labelledChunk.merges);
+            chunk.labels[0] = processElement(c.filt1, chunk.merges);
+            chunk.labels[1] = processElement(c.filt2, chunk.merges);
 
-            for (const auto &merge : labelledChunk.merges) {
+            for (const auto &merge : chunk.merges) {
                 PILI_DEBUG_ADDTEXT("M(" << merge.label1 << "," << merge.label2 << ") ");
             }
 
@@ -108,8 +104,8 @@ namespace pipeliner {
 
             PILI_DEBUG_ADDTEXT("; ");
 
-            queue_.enqueue(std::move(labelledChunk));
-            return true;
+            if (c.getType() == DataChunk::End) { chunk.setType(DataChunk::End); }
+            return chunk;
         }
 
         Uint16 processElement(bool elem, std::vector<Merge> &merge) {
@@ -156,16 +152,6 @@ namespace pipeliner {
             return label;
         }
 
-        void processReverseChunk() override {
-            LabelReuseChunk c{};
-            while (reverseQueue_.try_dequeue(c)) {
-                for (auto label : c.labels) {
-                    labelSet_.put(label);
-                }
-            }
-        }
-
-    private:
         void updateNeibhorsLabels(Uint16 label) {
             if (pos_.col != 0) {
                 auto &n1 = curRow_[pos_.col - 1];
@@ -193,12 +179,8 @@ namespace pipeliner {
             }
             return min == max ? 0 : min;
         }
-
-        const Uint16 width_;
-        std::vector<Uint16> prevRow_, curRow_;
-        LabelSet labelSet_;
-        Pos pos_;
-        moodycamel::BlockingReaderWriterQueue<LabelledChunk> queue_;
-        moodycamel::BlockingReaderWriterQueue<LabelReuseChunk> reverseQueue_;
     };
+
+    using LabellingBlock = GenericBlock<LabellingProcessor>;
+
 }
