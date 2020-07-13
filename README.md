@@ -150,3 +150,16 @@ tk@tp ~/proj/pipeliner/cmake-build-release (git)-[master] % ./pipeliner_benchmar
               Median performance: 2068207.17699 iterations/s (1st quartile: 2237497.46827 | 3rd quartile: 1914086.01933)
 [==========] Ran 1 benchmark..
 ```
+
+
+## Update 3
+
+Heavy refactor of the project
+
+When objects on the queues was wrapped in unique_ptr, dynamic
+polymorphism worked well. But now, without unique_ptr, every 
+block has queues of different type.
+
+I implemented static polymorphism (with help of templates). 
+Idea was to separate domain problem in the new classes 
+(Processors) of the remain code.
