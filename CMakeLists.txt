@@ -3,6 +3,12 @@ project(Pipeliner)
 
 set(CMAKE_CXX_STANDARD 17)
 
+option(PIPELINER_TESTS "Build unit tests (default OFF)" OFF)
+option(PIPELINER_BENCHMARK "Build load tests (default OFF)" OFF)
+
+message(STATUS "Build unit tests: ${PIPELINER_TESTS}")
+message(STATUS "Build load tests: ${PIPELINER_BENCHMARK}")
+
 find_package(Threads)
 
 set(PIPELINER_INCLUDE_FILES
@@ -46,29 +52,33 @@ AddPipelinerLib(pipeliner OFF)
 AddPipelinerLib(pipeliner_dbg ON)
 
 # Tests
-set(PIPELINER_TESTER_FILES
-        test/catch.hpp
-        test/tester_main.cpp
-        test/basic_block_test.cpp
-        test/generator_block_test.cpp
-        test/filter_block_test.cpp
-        test/generator_and_filter_test.cpp
-        test/labelling_block_test.cpp
-        test/computation_block_test.cpp
-        )
+if (PIPELINER_TESTS)
+    set(PIPELINER_TESTER_FILES
+            test/catch.hpp
+            test/tester_main.cpp
+            test/basic_block_test.cpp
+            test/generator_block_test.cpp
+            test/filter_block_test.cpp
+            test/generator_and_filter_test.cpp
+            test/labelling_block_test.cpp
+            test/computation_block_test.cpp
+            )
 
-source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
-add_executable(pipeliner_tester ${PIPELINER_TESTER_FILES})
-target_link_libraries(pipeliner_tester pipeliner_dbg)
-file(COPY test/data DESTINATION .)
+    source_group("Tester Files" FILES ${PIPELINER_TESTER_FILES})
+    add_executable(pipeliner_tester ${PIPELINER_TESTER_FILES})
+    target_link_libraries(pipeliner_tester pipeliner_dbg)
+    file(COPY test/data DESTINATION .)
+endif ()
 
 # Benchmark
-set(HAYAI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/dependencies/hayai")
-set(PIPELINER_BENCHMARK_FILES
-        benchmark/hayai_main.hpp
-        benchmark/hayai_posix_main.cpp
-        benchmark/benchmark_test.cpp)
-source_group("Benchmark Files" ${PIPELINER_BENCHMARK_FILES})
-add_executable(pipeliner_benchmark ${PIPELINER_BENCHMARK_FILES})
-target_link_libraries(pipeliner_benchmark pipeliner)
-target_include_directories(pipeliner_benchmark SYSTEM PUBLIC ${HAYAI_INCLUDE_DIR})
+if (PIPELINER_BENCHMARK)
+    set(HAYAI_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/dependencies/hayai")
+    set(PIPELINER_BENCHMARK_FILES
+            benchmark/hayai_main.hpp
+            benchmark/hayai_posix_main.cpp
+            benchmark/benchmark_test.cpp)
+    source_group("Benchmark Files" ${PIPELINER_BENCHMARK_FILES})
+    add_executable(pipeliner_benchmark ${PIPELINER_BENCHMARK_FILES})
+    target_link_libraries(pipeliner_benchmark pipeliner)
+    target_include_directories(pipeliner_benchmark SYSTEM PUBLIC ${HAYAI_INCLUDE_DIR})
+endif ()
